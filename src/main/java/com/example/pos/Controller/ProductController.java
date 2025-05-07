@@ -1,0 +1,40 @@
+package com.example.pos.Controller;
+
+import com.example.pos.DTO.ProductDto;
+import com.example.pos.Service.ProductService;
+import com.example.pos.util.Status;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/product")
+public class ProductController {
+    @Autowired
+    private ProductService productService;
+
+    @PostMapping("/categoryAdded")
+    public Status productAdded(@RequestBody ProductDto productDto) {
+        return productService.productAdded(productDto);
+    }
+
+    @PutMapping("/categoryUpdated/{category}")
+    public Status productUpdated(@PathVariable String category, @RequestBody ProductDto productDto) {
+        return productService.productUpdated(category, productDto);
+    }
+
+    @GetMapping("/getCategories/{id}")
+    public Status getProducts(@PathVariable int id) {
+        return productService.getProducts(id);
+    }
+
+    @GetMapping("/getAllProducts")
+    public Status getAll() {
+        return productService.getAll();
+    }
+
+    @DeleteMapping("/deleteProduct/{id}")
+    public Status deleteProduct(@PathVariable int id){
+        return productService.deleteRecord(id);
+    }
+
+}
