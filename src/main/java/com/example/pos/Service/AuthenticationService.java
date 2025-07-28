@@ -85,6 +85,7 @@ public class AuthenticationService {
             dbTrack.setCreatedAt(LocalDateTime.now());
             adminDatabaseRepo.save(dbTrack);
 
+
             try (Connection newDbConn = DriverManager.getConnection(
                     "jdbc:mysql://localhost:3306/" + dbName,
                     "root", "12345")) {
@@ -116,16 +117,23 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public Status login(String username, String password) {
-        Optional<Authentication> auth = authenticationRepo.findByUsernameAndPassword(username, password);
+    public Status login(String phoneNumber, String password) {
+        Optional<Authentication> authOpt = authenticationRepo.findByPhoneNumber(phoneNumber);
 
-        if (auth.isEmpty() || !auth.get().getIsActive()) {
+        if (authOpt.isEmpty() || !authOpt.get().getIsActive()) {
             return new Status(StatusMessage.FAILURE, "Invalid credentials or inactive account");
+        }
+
+        Authentication auth = authOpt.get();
+
+        // ✅ Match raw password with hashed password
+        if (!passwordEncoder.matches(password, auth.getPassword())) {
+            return new Status(StatusMessage.FAILURE, "Invalid credentials");
         }
 
         // ✅ Create new session
         Session session = new Session();
-        session.setUsername(username);
+        session.setPhoneNumber(phoneNumber);
         session.setToken(UUID.randomUUID().toString());
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusMinutes(SESSION_EXPIRY_MINUTES));
@@ -133,12 +141,13 @@ public class AuthenticationService {
         sessionRepo.save(session);
 
         // ✅ Fetch email from Authentication table
-        String email = auth.get().getEmail();
+        String email = auth.getEmail();
+        String username = auth.getUsername();
 
         // ✅ Send email
         emailService.sendLoginNotification(email, username);
 
-        return new Status(StatusMessage.SUCCESS, session.getToken());
+        return new Status(StatusMessage.SUCCESS, "User logged in successfully");
     }
 
     public Status validateSession(String token) {

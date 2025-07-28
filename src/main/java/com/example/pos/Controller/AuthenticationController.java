@@ -19,8 +19,8 @@ public class AuthenticationController {
         return authenticationService.register(authenticationDto);
     }
     @PostMapping("/login")
-    public Status login(@RequestParam String username, @RequestParam String password) {
-        return authenticationService.login(username,password);
+    public Status login(@RequestParam String phoneNumber, @RequestParam String password) {
+        return authenticationService.login(phoneNumber,password);
     }
     @GetMapping("/validate")
     public Status validateToken(@RequestParam String token) {
