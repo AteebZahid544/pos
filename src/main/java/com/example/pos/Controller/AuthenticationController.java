@@ -14,12 +14,16 @@ public class AuthenticationController {
     @Autowired
     private AuthenticationService authenticationService;
 
-    @PostMapping("/login")
-    public Status authentication(@RequestBody AuthenticationDto authenticationDto){
-        return authenticationService.authentication(authenticationDto);
+    @PostMapping("/register")
+    public Status registerUser(@RequestBody AuthenticationDto authenticationDto){
+        return authenticationService.register(authenticationDto);
     }
-    @PutMapping("/updatePassword/{username}")
-    public Status passwordUpdated(@PathVariable String username,@RequestBody AuthenticationDto authenticationDto){
-        return authenticationService.passwordUpdated(username,authenticationDto);
+    @PostMapping("/login")
+    public Status login(@RequestParam String username, @RequestParam String password) {
+        return authenticationService.login(username,password);
+    }
+    @GetMapping("/validate")
+    public Status validateToken(@RequestParam String token) {
+        return authenticationService.validateSession(token);
     }
 }
