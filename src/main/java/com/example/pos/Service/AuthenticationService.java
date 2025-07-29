@@ -181,4 +181,14 @@ public class AuthenticationService {
 
         return new Status(StatusMessage.SUCCESS, "Session active and extended");
     }
+    public Status logout(String token) {
+        Optional<Session> sessionOpt = sessionRepo.findByToken(token);
+
+        if (sessionOpt.isEmpty()) {
+            return new Status(StatusMessage.FAILURE, "Invalid token");
+        }
+        sessionRepo.delete(sessionOpt.get());
+
+        return new Status(StatusMessage.SUCCESS, "Logged out successfully");
+    }
 }

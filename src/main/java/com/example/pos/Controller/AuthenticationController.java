@@ -26,4 +26,9 @@ public class AuthenticationController {
     public Status validateToken(@RequestParam String token) {
         return authenticationService.validateSession(token);
     }
+
+    @DeleteMapping("/logout")
+    public Status logout(@RequestParam String token) {
+        return authenticationService.logout(token);
+    }
 }
