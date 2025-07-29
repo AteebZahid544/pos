@@ -1,6 +1,7 @@
 package com.example.pos.Service;
 
 import com.example.pos.DTO.AuthenticationDto;
+import com.example.pos.DTO.LoginResponseDto;
 import com.example.pos.entity.AdminDatabase;
 import com.example.pos.entity.Authentication;
 import com.example.pos.entity.Session;
@@ -145,14 +146,18 @@ public class AuthenticationService {
         session.setIsActive(true);
         sessionRepo.save(session);
 
-        // ✅ Fetch email from Authentication table
-        String email = auth.getEmail();
-        String username = auth.getUsername();
+        LoginResponseDto loginResponse = new LoginResponseDto();
+        loginResponse.setToken(session.getToken());
+        loginResponse.setExpiresAt(session.getExpiresAt());
+        loginResponse.setCreatedAt(session.getCreatedAt());
+        loginResponse.setUsername(auth.getUsername());
+        loginResponse.setPhoneNumber(auth.getPhoneNumber());
+        loginResponse.setEmail(auth.getEmail());
 
         // ✅ Send email
-        emailService.sendLoginNotification(email, username);
+        emailService.sendLoginNotification(loginResponse.getEmail(), loginResponse.getUsername());
 
-        return new Status(StatusMessage.SUCCESS, "User logged in successfully");
+        return new Status(StatusMessage.SUCCESS, loginResponse);
     }
 
     public Status validateSession(String token) {
