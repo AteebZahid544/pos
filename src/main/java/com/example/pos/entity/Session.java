@@ -23,9 +23,6 @@ public class Session {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    @Column(name = "is_active")
-    private boolean isActive;
-
     // Getters and Setters
 
     public Long getId() {
@@ -68,11 +65,5 @@ public class Session {
         this.expiresAt = expiresAt;
     }
 
-    public boolean isActive() {
-        return isActive;
-    }
 
-    public void setIsActive(boolean isActive) {
-        this.isActive = isActive;
-    }
 }

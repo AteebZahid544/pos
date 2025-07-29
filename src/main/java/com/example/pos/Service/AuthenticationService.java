@@ -143,7 +143,6 @@ public class AuthenticationService {
         session.setToken(UUID.randomUUID().toString());
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusMinutes(SESSION_EXPIRY_MINUTES));
-        session.setIsActive(true);
         sessionRepo.save(session);
 
         LoginResponseDto loginResponse = new LoginResponseDto();
@@ -169,9 +168,8 @@ public class AuthenticationService {
 
         Session session = sessionOpt.get();
 
-        if (!session.isActive() || session.getExpiresAt().isBefore(LocalDateTime.now())) {
-            session.setIsActive(false);
-            sessionRepo.save(session);
+        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
+            sessionRepo.delete(session);
             return new Status(StatusMessage.FAILURE, "Session expired");
         }
 
