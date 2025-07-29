@@ -53,10 +53,15 @@ public class AuthenticationService {
         if (user.getUsername() == null || user.getPassword() == null || user.getEmail() == null|| user.getPhoneNumber() == null) {
             return new Status(StatusMessage.FAILURE, "Username, password, email and phone number cannot be null");
         }
+        Optional<Authentication> authentication = authenticationRepo.findByPhoneNumber(user.getPhoneNumber());
 
-        if (authenticationRepo.findByUsername(user.getUsername()).isPresent()) {
-            return new Status(StatusMessage.FAILURE, "Username already exists");
+        if (authentication.isPresent()) {
+            if (authentication.get().getPhoneNumber().equals(user.getPhoneNumber()) ||
+                    authentication.get().getEmail().equals(user.getEmail())) {
+                return new Status(StatusMessage.FAILURE, "User already registered with these credentials");
+            }
         }
+
 
         // Save user in central authentication DB
         Authentication registerUser = new Authentication();
@@ -112,7 +117,7 @@ public class AuthenticationService {
             e.printStackTrace();
             return new Status(StatusMessage.FAILURE, "User saved but DB/table creation failed: " + e.getMessage());
         }
-
+        emailService.sendRegisterNotification(user.getEmail(), user.getUsername());
         return new Status(StatusMessage.SUCCESS, "User registered");
     }
 

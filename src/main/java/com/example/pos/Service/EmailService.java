@@ -32,19 +32,29 @@ public class EmailService {
     public void sendLoginNotification(String toEmail, String username) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
-        message.setSubject("POS System Login Alert");
-        message.setText("Dear " + username + ",\n\nYou have successfully logged into the POS system."
+        message.setSubject("AZ Management System Login Alert");
+        message.setText("Dear " + username + ",\n\nYou have successfully logged into the AZ Management system."
                 + "\n\nIf this wasn't you, please contact the administrator immediately."
-                + "\n\nRegards,\nPOS System");
+                + "\n\nRegards,\nAZ Management System");
         mailSender.send(message);
     }
     public void sendOtpNotification(String toEmail, String username, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
-        message.setSubject("POS System OTP Verification");
-        message.setText("Dear " + username + ",\n\nYour OTP for POS system verification is: " + otp
+        message.setSubject("AZ Management System OTP Verification");
+        message.setText("Dear " + username + ",\n\nYour OTP for AZ Management system verification is: " + otp
                 + "\n\nPlease use this OTP to complete your login process."
-                + "\n\nRegards,\nPOS System");
+                + "\n\nRegards,\nAZ Management System");
+        mailSender.send(message);
+    }
+
+    public void sendRegisterNotification(String toEmail, String username) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("AZ Management System OTP Verification");
+        message.setText("Dear " + username + ",\n\nYou have successfully logged into the AZ Management system."
+                + "\n\nIf this wasn't you, please contact the administrator immediately."
+                + "\n\nRegards,\nAZ Management System");
         mailSender.send(message);
     }
 
