@@ -22,15 +22,11 @@ public class ProductController {
         return productService.productUpdated(category, productDto);
     }
 
-    @GetMapping("/getCategories/{id}")
-    public Status getProducts(@PathVariable int id) {
-        return productService.getProducts(id);
+    @GetMapping("/getProducts")
+    public Status getProducts(@RequestParam(required = false) String category) {
+        return productService.getProductsByCategory(category);
     }
 
-    @GetMapping("/getAllProducts")
-    public Status getAll() {
-        return productService.getAll();
-    }
 
     @DeleteMapping("/deleteProduct/{id}")
     public Status deleteProduct(@PathVariable int id){

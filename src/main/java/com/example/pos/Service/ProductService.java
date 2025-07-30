@@ -140,28 +140,26 @@ public class ProductService {
         return new Status(StatusMessage.SUCCESS, productRepo.save(product));
     }
 
-    public Status getProducts(int id) {
-        ProductEntity product = productRepo.findById(id);
-        if (Objects.isNull(product.getIsActive()) || Boolean.FALSE.equals(product.getIsActive())) {
-            return new Status(StatusMessage.FAILURE, "Record is not find against this id ");
-        }
-        return new Status(StatusMessage.SUCCESS, product);
-    }
+    public Status getProductsByCategory(String category) {
+        List<ProductEntity> allProducts = productRepo.findAll();
 
-    public Status getAll() {
-        List<ProductEntity> productEntities = productRepo.findAll();
-        if (productEntities.isEmpty()) {
-            return new Status(StatusMessage.FAILURE, "List of user is empty");
+        if (allProducts.isEmpty()) {
+            return new Status(StatusMessage.FAILURE, "No products found");
         }
-        List<ProductEntity> product = productEntities.stream()
+
+        List<ProductEntity> filteredProducts = allProducts.stream()
                 .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                .filter(p -> category == null || category.equalsIgnoreCase(p.getCategory()))
                 .collect(Collectors.toList());
 
-        if (product.isEmpty()) {
-            return new Status(StatusMessage.FAILURE, "No active product found ");
+        if (filteredProducts.isEmpty()) {
+            return new Status(StatusMessage.FAILURE, "No active product found" +
+                    (category != null ? " for category: " + category : ""));
         }
-        return new Status(StatusMessage.SUCCESS, product);
+
+        return new Status(StatusMessage.SUCCESS, filteredProducts);
     }
+
 
     public Status deleteRecord(int id) {
         ProductEntity product=productRepo.findById(id);
