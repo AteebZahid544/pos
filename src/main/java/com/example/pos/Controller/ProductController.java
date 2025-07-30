@@ -37,4 +37,8 @@ public class ProductController {
         return productService.deleteRecord(id);
     }
 
+    @PostMapping("/companyPayBill")
+    public Status companyPayBill(@RequestParam String vendorName,@RequestParam int amount) {
+        return productService.payVendorBill(vendorName,amount);
+    }
 }

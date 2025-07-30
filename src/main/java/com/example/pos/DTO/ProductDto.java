@@ -6,7 +6,7 @@ public class ProductDto {
     private String category;
     private Integer quantity;
     private BigDecimal price;
-    private boolean isActive;
+    public String vendorName;
 
 
     public String getCategory() {
@@ -16,6 +16,7 @@ public class ProductDto {
     public void setCategory(String category) {
         this.category = category;
     }
+
     public BigDecimal getPrice() {
         return price;
     }
@@ -23,6 +24,7 @@ public class ProductDto {
     public void setPrice(BigDecimal price) {
         this.price = price;
     }
+
     public Integer getQuantity() {
         return quantity;
     }
@@ -31,12 +33,11 @@ public class ProductDto {
         this.quantity = quantity;
     }
 
-    public boolean getIsActive() {
-        return isActive;
+    public String getVendorName() {
+        return vendorName;
     }
 
-    public void setIsActive(boolean isActive) {
-        this.isActive = isActive;
+    public void setVendorName(String vendorName) {
+        this.vendorName = vendorName;
     }
-
 }

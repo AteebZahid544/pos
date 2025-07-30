@@ -3,6 +3,7 @@ package com.example.pos.entity;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "products")
@@ -23,6 +24,12 @@ public class ProductEntity {
 
     @Column(name = "total_price")
     private BigDecimal totalPrice;
+
+    @Column(name = "vendor_name")
+    private String vendorName;
+
+    @Column(name="product_entry_time")
+    LocalDateTime productEntryTime;
 
     @Column(name = "is_Active")
     private Boolean isActive;
@@ -61,5 +68,19 @@ public class ProductEntity {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getVendorName() {
+        return vendorName;
+    }
+    public void setVendorName(String vendorName) {
+        this.vendorName = vendorName;
+    }
+
+    public LocalDateTime getProductEntryTime() {
+        return productEntryTime;
+    }
+    public void setProductEntryTime(LocalDateTime productEntryTime) {
+        this.productEntryTime = productEntryTime;
     }
 }
