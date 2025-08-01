@@ -1,6 +1,7 @@
 package com.example.pos.Service;
 
 import com.example.pos.DTO.AuthenticationDto;
+import com.example.pos.DTO.LoginDto;
 import com.example.pos.DTO.LoginResponseDto;
 import com.example.pos.entity.AdminDatabase;
 import com.example.pos.entity.Authentication;
@@ -123,8 +124,8 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public Status login(String phoneNumber, String password) {
-        Optional<Authentication> authOpt = authenticationRepo.findByPhoneNumber(phoneNumber);
+    public Status login(LoginDto loginDto) {
+        Optional<Authentication> authOpt = authenticationRepo.findByPhoneNumber(loginDto.getPhoneNumber());
 
         if (authOpt.isEmpty() || !authOpt.get().getIsActive()) {
             return new Status(StatusMessage.FAILURE, "Invalid credentials or inactive account");
@@ -133,13 +134,13 @@ public class AuthenticationService {
         Authentication auth = authOpt.get();
 
         // ✅ Match raw password with hashed password
-        if (!passwordEncoder.matches(password, auth.getPassword())) {
+        if (!passwordEncoder.matches(loginDto.getPassword(), auth.getPassword())) {
             return new Status(StatusMessage.FAILURE, "Invalid credentials");
         }
 
         // ✅ Create new session
         Session session = new Session();
-        session.setPhoneNumber(phoneNumber);
+        session.setPhoneNumber(loginDto.getPhoneNumber());
         session.setToken(UUID.randomUUID().toString());
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusMinutes(SESSION_EXPIRY_MINUTES));

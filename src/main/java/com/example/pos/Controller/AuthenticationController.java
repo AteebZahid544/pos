@@ -2,6 +2,7 @@
 package com.example.pos.Controller;
 
 import com.example.pos.DTO.AuthenticationDto;
+import com.example.pos.DTO.LoginDto;
 import com.example.pos.Service.AuthenticationService;
 import com.example.pos.util.Status;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +20,8 @@ public class AuthenticationController {
         return authenticationService.register(authenticationDto);
     }
     @PostMapping("/login")
-    public Status login(@RequestParam String phoneNumber, @RequestParam String password) {
-        return authenticationService.login(phoneNumber,password);
+    public Status login(@RequestBody LoginDto loginDto) {
+        return authenticationService.login(loginDto);
     }
     @GetMapping("/validate")
     public Status validateToken(@RequestParam String token) {
