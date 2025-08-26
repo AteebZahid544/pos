@@ -16,6 +16,9 @@ public class ProductEntity {
     @Column(name = "category")
     private String category;
 
+    @Column(name = "product_name")
+    private String productName;
+
     @Column(name = "price")
     private BigDecimal price;
 
@@ -82,5 +85,12 @@ public class ProductEntity {
     }
     public void setProductEntryTime(LocalDateTime productEntryTime) {
         this.productEntryTime = productEntryTime;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+    public void setProductName(String productName) {
+        this.productName = productName;
     }
 }

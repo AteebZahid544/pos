@@ -12,12 +12,12 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    @PostMapping("/categoryAdded")
+    @PostMapping("/stockAdded")
     public Status productAdded(@RequestBody ProductDto productDto) {
         return productService.productAdded(productDto);
     }
 
-    @PutMapping("/categoryUpdated/{category}")
+    @PutMapping("/productUpdated/{product}")
     public Status productUpdated(@PathVariable String category, @RequestBody ProductDto productDto) {
         return productService.productUpdated(category, productDto);
     }

@@ -1,14 +1,8 @@
 package com.example.pos.Service;
 
 import com.example.pos.DTO.ProductDto;
-import com.example.pos.entity.CompanyBillAmountPaid;
-import com.example.pos.entity.CompanyPaymentTime;
-import com.example.pos.entity.InventoryEntity;
-import com.example.pos.entity.ProductEntity;
-import com.example.pos.repo.CompanyBillAmountPaidRepo;
-import com.example.pos.repo.CompanyPaymentTimeRepo;
-import com.example.pos.repo.InventoryRepo;
-import com.example.pos.repo.ProductRepo;
+import com.example.pos.entity.*;
+import com.example.pos.repo.*;
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,11 +30,29 @@ public class ProductService {
     @Autowired
     private CompanyPaymentTimeRepo companyPaymentTimeRepo;
 
+    @Autowired
+    private ProductNameRepository productNameRepository;
+
     public Status productAdded(ProductDto productDto) {
         if (Objects.nonNull(productDto)) {
             // Step 1: Save Product
             ProductEntity product = new ProductEntity();
-            product.setCategory(productDto.getCategory());
+            product.setProductName(productDto.getProductName());
+
+            Optional<ProductName> productNameOpt = productNameRepository.findByProductName(productDto.getProductName());
+
+            if (productNameOpt.isEmpty()) {
+                return new Status(StatusMessage.FAILURE,"Product name not found");
+            }
+
+            ProductName productNameEntity = productNameOpt.get();
+
+// Fetch category from ProductName
+            Category category = productNameEntity.getCategory();
+            if (category == null) {
+                return new Status(StatusMessage.FAILURE,"Category not found for the given product");
+            }
+            product.setCategory(category.getCategoryName());
             product.setQuantity(productDto.getQuantity());
             product.setPrice(productDto.getPrice());
             product.setVendorName(productDto.getVendorName());
@@ -162,13 +175,13 @@ public class ProductService {
 
 
     public Status deleteRecord(int id) {
-        ProductEntity product=productRepo.findById(id);
-        if (Boolean.FALSE.equals(product.getIsActive())){
-            return new Status(StatusMessage.FAILURE,"Record is already deleted");
+        ProductEntity product = productRepo.findById(id);
+        if (Boolean.FALSE.equals(product.getIsActive())) {
+            return new Status(StatusMessage.FAILURE, "Record is already deleted");
         }
         product.setIsActive(false);
         productRepo.save(product);
-        return new Status(StatusMessage.SUCCESS,"Product is deleted");
+        return new Status(StatusMessage.SUCCESS, "Product is deleted");
     }
 
     public Status payVendorBill(String vendorName, int amount) {
