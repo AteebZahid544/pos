@@ -28,32 +28,50 @@ public class CategoryService {
         if (dto.getCategoryName() == null || dto.getCategoryName().isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
         }
+
         Category category;
         Optional<Category> existingCategory = categoryRepository.findByCategoryNameAndIsActiveTrue(dto.getCategoryName());
 
         if (existingCategory.isPresent()) {
-            category = existingCategory.get(); // use existing category
+            category = existingCategory.get();
         } else {
             category = new Category(); // create new category
             category.setCategoryName(dto.getCategoryName());
-            category.setIsActive(true); // set active status
+            category.setIsActive(true);
         }
 
-        List<ProductName> productList = dto.getProducts().stream().map(p -> {
+        List<ProductName> updatedProducts = new ArrayList<>();
+
+        for (ProductNameDto p : dto.getProducts()) {
+            Optional<ProductName> dbProduct = productNameRepository
+                    .findByCategoryAndProductNameIgnoreCaseAndIsActiveTrue(category, p.getProductName());
+
+            if (dbProduct.isPresent()) {
+                return new Status(StatusMessage.FAILURE,
+                        "Product '" + p.getProductName() + "' already exists against this category");
+            }
+
+
             ProductName product = new ProductName();
             product.setProductName(p.getProductName());
             product.setProductPrice(p.getProductPrice());
-            product.setIsActive(true); // set active status
+            product.setIsActive(true);
             product.setCategory(category);
-            return product;
-        }).collect(Collectors.toList());
 
-        category.setProducts(productList);
+            updatedProducts.add(product);
+        }
 
+        if (category.getProducts() == null) {
+            category.setProducts(new ArrayList<>());
+        }
+        category.getProducts().addAll(updatedProducts);
         categoryRepository.save(category);
 
-        return new Status(StatusMessage.SUCCESS, "Category with products saved");
+        return new Status(StatusMessage.SUCCESS, "Category with products saved/updated successfully");
     }
+
+
+
 
     public Status updateCategoryWithProducts(CategoryRequestDto dto){
         if (dto.getCategoryName() == null || dto.getCategoryName().isEmpty()) {
