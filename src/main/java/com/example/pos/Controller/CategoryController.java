@@ -18,7 +18,7 @@ public class CategoryController {
     public Status addCategory(@RequestBody CategoryRequestDto dto) {
         return categoryService.saveCategoryWithProducts(dto);
     }
-    @PutMapping("/updateCategoryWithProducts")
+    @PutMapping("/updateCategory")
     public Status updateCategory(@RequestBody CategoryRequestDto dto) {
         return categoryService.updateCategoryWithProducts(dto);
     }
