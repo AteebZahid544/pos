@@ -73,7 +73,7 @@ public class CategoryService {
 
 
 
-    public Status updateCategoryWithProducts(CategoryRequestDto dto){
+    public Status updateCategory(CategoryRequestDto dto){
         if (dto.getCategoryName() == null || dto.getCategoryName().isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
         }

@@ -20,7 +20,7 @@ public class CategoryController {
     }
     @PutMapping("/updateCategory")
     public Status updateCategory(@RequestBody CategoryRequestDto dto) {
-        return categoryService.updateCategoryWithProducts(dto);
+        return categoryService.updateCategory(dto);
     }
 
     @GetMapping("/getCategories")
