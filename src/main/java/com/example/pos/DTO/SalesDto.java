@@ -1,8 +1,13 @@
 package com.example.pos.DTO;
 
+import lombok.Data;
+
 import java.math.BigDecimal;
 
+@Data
 public class SalesDto {
+
+    private String category;
 
     private String product;
 
@@ -14,45 +19,8 @@ public class SalesDto {
 
     private BigDecimal totalAmount;
 
+    private String customerName;
 
-    public String getProduct() {
-        return product;
-    }
+    private BigDecimal amountPaid;
 
-    public void setProduct(String product) {
-        this.product = product;
-    }
-
-    public BigDecimal getDiscount() {
-        return discount;
-    }
-
-    public void setDiscount(BigDecimal discount) {
-        this.discount = discount;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public BigDecimal getTotalAmount() {
-        return totalAmount;
-    }
-
-    public void setTotalAmount(BigDecimal totalAmount) {
-        this.totalAmount = totalAmount;
-    }
 }

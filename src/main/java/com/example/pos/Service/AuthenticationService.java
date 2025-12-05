@@ -3,30 +3,29 @@ package com.example.pos.Service;
 import com.example.pos.DTO.AuthenticationDto;
 import com.example.pos.DTO.LoginDto;
 import com.example.pos.DTO.LoginResponseDto;
-import com.example.pos.entity.AdminDatabase;
-import com.example.pos.entity.Authentication;
-import com.example.pos.entity.Session;
-import com.example.pos.repo.AdminDatabaseRepository;
-import com.example.pos.repo.AuthenticationRepo;
+import com.example.pos.config.CurrentTenantIdentifierResolverImpl;
+import com.example.pos.config.MultiTenantConnectionProviderImpl;
+import com.example.pos.config.TenantContext;
+import com.example.pos.entity.central.AdminDatabase;
+import com.example.pos.entity.central.Authentication;
+import com.example.pos.entity.central.Session;
+import com.example.pos.repo.central.AdminDatabaseRepository;
+import com.example.pos.repo.central.AuthenticationRepo;
 
-import com.example.pos.repo.SessionRepo;
+import com.example.pos.repo.central.SessionRepo;
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
 
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,114 +50,132 @@ public class AuthenticationService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private DataSource centralDataSource; // central authentication DB
+
+    @Autowired
+    private MultiTenantConnectionProviderImpl multiTenantConnectionProvider;
+
     public Status register(AuthenticationDto user) {
-        if (user.getUsername() == null || user.getPassword() == null || user.getEmail() == null|| user.getPhoneNumber() == null) {
-            return new Status(StatusMessage.FAILURE, "Username, password, email and phone number cannot be null");
-        }
-        Optional<Authentication> authentication = authenticationRepo.findByPhoneNumber(user.getPhoneNumber());
 
-        if (authentication.isPresent()) {
-            if (authentication.get().getPhoneNumber().equals(user.getPhoneNumber()) ||
-                    authentication.get().getEmail().equals(user.getEmail())) {
-                return new Status(StatusMessage.FAILURE, "User already registered with these credentials");
+        // Validate inputs
+        if (user.getUsername() == null || user.getPassword() == null ||
+                user.getEmail() == null || user.getPhoneNumber() == null) {
+            return new Status(StatusMessage.FAILURE,
+                    "Username, password, email and phone number cannot be null");
+        }
+
+        // ✅ Use central datasource to check existing user
+        try (Connection conn = centralDataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT * FROM authentication WHERE phone_number=? OR email=?")) {
+            ps.setString(1, user.getPhoneNumber());
+            ps.setString(2, user.getEmail());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new Status(StatusMessage.FAILURE, "User already registered");
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new Status(StatusMessage.FAILURE, "Error checking user: " + e.getMessage());
         }
-
 
         // Save user in central authentication DB
-        Authentication registerUser = new Authentication();
-        registerUser.setUsername(user.getUsername());
-        registerUser.setPhoneNumber(user.getPhoneNumber());
-        registerUser.setPassword(passwordEncoder.encode(user.getPassword()));
-        registerUser.setEmail(user.getEmail());
-        registerUser.setIsActive(true);
-        authenticationRepo.save(registerUser);
+        Authentication authUser = new Authentication();
+        authUser.setUsername(user.getUsername());
+        authUser.setPhoneNumber(user.getPhoneNumber());
+        authUser.setEmail(user.getEmail());
+        authUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        authUser.setActive(true);
 
-        // Construct DB name
-        String dbName = "pos_user_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
+        // Construct tenant schema name
+        String schemaName = "tenant_" + user.getPhoneNumber().toLowerCase().replaceAll("[^a-z0-9]", "_");
+        authUser.setDatabaseName(schemaName);
 
-        try (Connection conn = dataSource.getConnection();
+        authenticationRepo.save(authUser);
+
+        // --------------- Create tenant schema ----------------
+        try (Connection conn = centralDataSource.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            // Step 1: Create new database
-            stmt.executeUpdate("CREATE DATABASE " + dbName);
+            // 1️⃣ Create schema
+            stmt.executeUpdate("CREATE SCHEMA IF NOT EXISTS " + schemaName);
 
-            // Step 2: Save to admin_databases table
+            // 2️⃣ Save schema info in admin database
             AdminDatabase dbTrack = new AdminDatabase();
             dbTrack.setUsername(user.getUsername());
-            dbTrack.setDatabaseName(dbName);
+            dbTrack.setDatabaseName(schemaName);
             dbTrack.setStatus("ACTIVE");
             dbTrack.setPhoneNumber(user.getPhoneNumber());
             dbTrack.setCreatedAt(LocalDateTime.now());
             adminDatabaseRepo.save(dbTrack);
 
+            // 3️⃣ Initialize tables
+            ClassPathResource resource = new ClassPathResource("sql/init.sql");
+            String sqlScript = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
 
-            try (Connection newDbConn = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/" + dbName,
-                    "root", "12345")) {
-
-                try {
-                    Resource resource = new ClassPathResource("sql/init.sql");
-                    String sqlScript = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-
-                    Statement newDbStmt = newDbConn.createStatement();
-                    for (String sql : sqlScript.split(";")) {
-                        sql = sql.trim();
-                        if (!sql.isEmpty()) {
-                            newDbStmt.execute(sql);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return new Status(StatusMessage.FAILURE, "Failed to read init.sql file: " + e.getMessage());
+            for (String sql : sqlScript.split(";")) {
+                sql = sql.trim();
+                if (!sql.isEmpty()) {
+                    sql = sql.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS " + schemaName + ".");
+                    stmt.execute(sql);
                 }
-
             }
 
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             e.printStackTrace();
-            return new Status(StatusMessage.FAILURE, "User saved but DB/table creation failed: " + e.getMessage());
+            return new Status(StatusMessage.FAILURE,
+                    "User saved but tenant schema creation failed: " + e.getMessage());
         }
+
         emailService.sendRegisterNotification(user.getEmail(), user.getUsername());
-        return new Status(StatusMessage.SUCCESS, "User registered");
+        return new Status(StatusMessage.SUCCESS, "User registered successfully");
     }
 
+    // --------------------- LOGIN ---------------------
     @Transactional
     public Status login(LoginDto loginDto) {
+        // 1️⃣ Authenticate using central DB
         Optional<Authentication> authOpt = authenticationRepo.findByPhoneNumber(loginDto.getPhoneNumber());
-
-        if (authOpt.isEmpty() || !authOpt.get().getIsActive()) {
+        if (authOpt.isEmpty() || !authOpt.get().isActive()) {
             return new Status(StatusMessage.FAILURE, "Invalid credentials or inactive account");
         }
 
         Authentication auth = authOpt.get();
 
-        // ✅ Match raw password with hashed password
         if (!passwordEncoder.matches(loginDto.getPassword(), auth.getPassword())) {
             return new Status(StatusMessage.FAILURE, "Invalid credentials");
         }
 
-        // ✅ Create new session
+        // 2️⃣ Set tenant for this session
+        TenantContext.setTenantId(auth.getDatabaseName());
+
+        // ✅ All JPA operations after this point will use tenant schema
+        // Example: you can load tenant-specific tables here
+
+        // 3️⃣ Create session
         Session session = new Session();
-        session.setPhoneNumber(loginDto.getPhoneNumber());
+        session.setPhoneNumber(auth.getPhoneNumber());
         session.setToken(UUID.randomUUID().toString());
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusMinutes(SESSION_EXPIRY_MINUTES));
         sessionRepo.save(session);
 
-        LoginResponseDto loginResponse = new LoginResponseDto();
-        loginResponse.setToken(session.getToken());
-        loginResponse.setExpiresAt(session.getExpiresAt());
-        loginResponse.setCreatedAt(session.getCreatedAt());
-        loginResponse.setUsername(auth.getUsername());
-        loginResponse.setPhoneNumber(auth.getPhoneNumber());
-        loginResponse.setEmail(auth.getEmail());
+        // 4️⃣ Prepare response
+        LoginResponseDto response = new LoginResponseDto();
+        response.setToken(session.getToken());
+        response.setCreatedAt(session.getCreatedAt());
+        response.setExpiresAt(session.getExpiresAt());
+        response.setUsername(auth.getUsername());
+        response.setPhoneNumber(auth.getPhoneNumber());
+        response.setEmail(auth.getEmail());
+        response.setTenantId(auth.getDatabaseName());
 
-        // ✅ Send email
-        emailService.sendLoginNotification(loginResponse.getEmail(), loginResponse.getUsername());
+        emailService.sendLoginNotification(auth.getEmail(), auth.getUsername());
 
-        return new Status(StatusMessage.SUCCESS, loginResponse);
+        return new Status(StatusMessage.SUCCESS, response);
     }
+
 
     public Status validateSession(String token) {
         Optional<Session> sessionOpt = sessionRepo.findByToken(token);

@@ -6,6 +6,8 @@ import com.example.pos.util.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/product")
 public class ProductController {
@@ -17,24 +19,24 @@ public class ProductController {
         return productService.productAdded(productDto);
     }
 
-    @PutMapping("/productUpdated/{product}")
-    public Status productUpdated(@PathVariable String category, @RequestBody ProductDto productDto) {
-        return productService.productUpdated(category, productDto);
+    @PutMapping("/productUpdated/{id}")
+    public Status productUpdated(@PathVariable int id
+            , @RequestBody ProductDto productDto) {
+        return productService.productUpdated(id, productDto);
     }
 
-    @GetMapping("/getProducts")
-    public Status getProducts(@RequestParam(required = false) String category) {
-        return productService.getProductsByCategory(category);
+    @GetMapping("/products/by-category-and-name")
+    public Status getProducts(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String productName
+    ) {
+        return productService.searchProducts(category, productName);
     }
 
 
     @DeleteMapping("/deleteProduct/{id}")
-    public Status deleteProduct(@PathVariable int id){
+    public Status deleteProduct(@PathVariable int id) {
         return productService.deleteRecord(id);
     }
 
-    @PostMapping("/companyPayBill")
-    public Status companyPayBill(@RequestParam String vendorName,@RequestParam int amount) {
-        return productService.payVendorBill(vendorName,amount);
-    }
 }

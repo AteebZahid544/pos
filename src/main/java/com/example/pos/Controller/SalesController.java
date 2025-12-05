@@ -20,4 +20,14 @@ public class SalesController {
     public Status deleteSaleRecord(@PathVariable int id){
         return salesService.cancelProductSale(id);
     }
+
+    @GetMapping("/get-customer-balance")
+    public Status getBalance(@RequestParam(required = false) String customerName) {
+        return salesService.getCustomerBalance(customerName);
+    }
+
+    @GetMapping("/customer-ledger")
+    public Status getCustomerLedger(@RequestParam String customerName) {
+        return salesService.getCustomerLedger(customerName);
+    }
 }

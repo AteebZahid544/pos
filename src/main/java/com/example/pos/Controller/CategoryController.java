@@ -32,13 +32,13 @@ public class CategoryController {
     public Status deleteCategory(@RequestParam("categoryName") String categoryName) {
         return categoryService.deleteCategoryByName(categoryName);
     }
-    @PutMapping("/updateProductData")
+    @PutMapping("/updateProductNameOrPrice")
     public Status updateProductData(@RequestBody ProductNameDto productNameDto) {
         return categoryService.updateProductNameAndPrice(productNameDto);
     }
 
-    @DeleteMapping("/deleteProductData")
+    @DeleteMapping("/deleteProductNameAndPrice")
     public Status deleteProductData(@RequestBody ProductNameDto productNameDto) {
-        return categoryService.deleteProductByName(productNameDto);
+        return categoryService.deleteProductById(productNameDto);
     }
 }

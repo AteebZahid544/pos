@@ -1,17 +1,20 @@
 package com.example.pos.Service;
 
 import com.example.pos.DTO.CategoryRequestDto;
-import com.example.pos.DTO.ProductDto;
 import com.example.pos.DTO.ProductNameDto;
-import com.example.pos.entity.Category;
-import com.example.pos.entity.ProductName;
-import com.example.pos.repo.CategoryRepository;
-import com.example.pos.repo.ProductNameRepository;
+import com.example.pos.config.CurrentTenantIdentifierResolverImpl;
+import com.example.pos.entity.pos.Category;
+import com.example.pos.entity.pos.ProductName;
+import com.example.pos.repo.pos.CategoryRepository;
+import com.example.pos.repo.pos.ProductNameRepository;
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,52 +27,50 @@ public class CategoryService {
     @Autowired
     private ProductNameRepository productNameRepository;
 
+    @Transactional("posTransactionManager")
     public Status saveCategoryWithProducts(CategoryRequestDto dto) {
+
         if (dto.getCategoryName() == null || dto.getCategoryName().isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
         }
 
-        Category category;
-        Optional<Category> existingCategory = categoryRepository.findByCategoryNameAndIsActiveTrue(dto.getCategoryName());
+        // --- 1. Check existing category ---
+        Category category = categoryRepository
+                .findByCategoryNameAndIsActiveTrue(dto.getCategoryName())
+                .orElseGet(() -> {
+                    Category c = new Category();
+                    c.setCategoryName(dto.getCategoryName());
+                    c.setIsActive(true);
+                    c.setProducts(new ArrayList<>());
+                    return c;
+                });
 
-        if (existingCategory.isPresent()) {
-            category = existingCategory.get();
-        } else {
-            category = new Category(); // create new category
-            category.setCategoryName(dto.getCategoryName());
-            category.setIsActive(true);
-        }
+        // --- 2. Check for duplicate products ---
+        List<String> existingProductNames = category.getProducts().stream()
+                .map(ProductName::getProductName)
+                .map(String::toLowerCase)
+                .toList();
 
-        List<ProductName> updatedProducts = new ArrayList<>();
-
-        for (ProductNameDto p : dto.getProducts()) {
-            Optional<ProductName> dbProduct = productNameRepository
-                    .findByCategoryAndProductNameIgnoreCaseAndIsActiveTrue(category, p.getProductName());
-
-            if (dbProduct.isPresent()) {
+        for (ProductNameDto pDto : dto.getProducts()) {
+            if (existingProductNames.contains(pDto.getProductName().toLowerCase())) {
                 return new Status(StatusMessage.FAILURE,
-                        "Product '" + p.getProductName() + "' already exists against this category");
+                        "Product '" + pDto.getProductName() + "' already exists against this category");
             }
 
-
             ProductName product = new ProductName();
-            product.setProductName(p.getProductName());
-            product.setProductPrice(p.getProductPrice());
+            product.setProductName(pDto.getProductName());
+            product.setProductPrice(pDto.getProductPrice());
             product.setIsActive(true);
             product.setCategory(category);
 
-            updatedProducts.add(product);
+            category.getProducts().add(product);
         }
 
-        if (category.getProducts() == null) {
-            category.setProducts(new ArrayList<>());
-        }
-        category.getProducts().addAll(updatedProducts);
+        // --- 3. Save category and products in the correct tenant ---
         categoryRepository.save(category);
 
         return new Status(StatusMessage.SUCCESS, "Category with products saved/updated successfully");
     }
-
 
 
 
@@ -108,7 +109,7 @@ public class CategoryService {
             existingProduct.setProductPrice(dtoProduct.getProductPrice());
         }
         productNameRepository.save(existingProduct);
-        return new Status(StatusMessage.SUCCESS, "Product updated successfully");
+        return new Status(StatusMessage.SUCCESS, "Product name or price updated successfully");
     }
 
     public Status getCategories(String categoryName) {
@@ -118,7 +119,7 @@ public class CategoryService {
                 Category category = optionalCategory.get();
                 return new Status(StatusMessage.SUCCESS,mapToDto(category));
             } else {
-                return new Status(StatusMessage.FAILURE, "Category not found");
+                return new Status(StatusMessage.FAILURE, "Categories not found");
             }
         } else {
             List<Category> allCategories = categoryRepository.findAllByIsActiveTrue();
@@ -154,19 +155,36 @@ public class CategoryService {
         if (categoryName == null || categoryName.isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
         }
-        Optional<Category> optionalCategory = categoryRepository.findByCategoryNameAndIsActiveTrue(categoryName);
+
+        Optional<Category> optionalCategory =
+                categoryRepository.findByCategoryNameAndIsActiveTrue(categoryName);
 
         if (optionalCategory.isPresent()) {
             Category category = optionalCategory.get();
+
+            // Soft delete category
             category.setIsActive(false);
+            category.setDeletedBy(LocalDateTime.now());
+
+            // Soft delete all products of that category
+            if (category.getProducts() != null) {
+                category.getProducts().forEach(product -> {
+                    product.setIsActive(false);
+                    product.setDeletedBy(LocalDateTime.now());
+                });
+            }
+
             categoryRepository.save(category);
-            return new Status(StatusMessage.SUCCESS, "Category deleted successfully");
+
+            return new Status(StatusMessage.SUCCESS,
+                    "Category and all product names soft-deleted successfully");
         } else {
             return new Status(StatusMessage.FAILURE, "Category not found");
         }
     }
 
-    public Status deleteProductByName(ProductNameDto productNameDto) {
+
+    public Status deleteProductById(ProductNameDto productNameDto) {
         if (productNameDto.getId() == null) {
             return new Status(StatusMessage.FAILURE, "Product Id cannot be null");
         }
@@ -175,6 +193,7 @@ public class CategoryService {
         if (optionalProduct.isPresent()) {
             ProductName product = optionalProduct.get();
             product.setIsActive(false);
+            product.setDeletedBy(LocalDateTime.now());
             productNameRepository.save(product);
             return new Status(StatusMessage.SUCCESS, "Product deleted successfully");
         } else {

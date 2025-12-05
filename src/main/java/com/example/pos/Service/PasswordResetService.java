@@ -1,12 +1,12 @@
 package com.example.pos.Service;
 
 import com.example.pos.DTO.ChangePasswordRequest;
-import com.example.pos.entity.Authentication;
-import com.example.pos.entity.OtpRequestLog;
-import com.example.pos.entity.PasswordResetOtp;
-import com.example.pos.repo.AuthenticationRepo;
-import com.example.pos.repo.OtpRequestLogRepository;
-import com.example.pos.repo.PasswordResetOtpRepository;
+import com.example.pos.entity.central.Authentication;
+import com.example.pos.entity.pos.OtpRequestLog;
+import com.example.pos.entity.pos.PasswordResetOtp;
+import com.example.pos.repo.central.AuthenticationRepo;
+import com.example.pos.repo.pos.OtpRequestLogRepository;
+import com.example.pos.repo.pos.PasswordResetOtpRepository;
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
 import jakarta.transaction.Transactional;
@@ -101,11 +101,11 @@ public class PasswordResetService {
     @Transactional
     public Status resetPassword(ChangePasswordRequest request) {
         if (request.getNewPassword() == null || request.getNewPassword().isEmpty() ||request.getConfirmPassword() == null|| request.getEmail() == null || request.getEmail().isEmpty() ) {
-            return new Status(StatusMessage.FAILURE, "Some fields are empty");
+            return new Status(StatusMessage.FAILURE, "Required fields are empty");
         }
 
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            return new Status(StatusMessage.FAILURE, "Passwords do not match");
+            return new Status(StatusMessage.FAILURE, "Password and confirm password does not match");
         }
 
         Optional<Authentication> user = authRepo.findByEmail(request.getEmail());

@@ -3,6 +3,7 @@ package com.example.pos.DTO;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class ProductDto {
@@ -12,44 +13,9 @@ public class ProductDto {
     private Integer quantity;
     private BigDecimal price;
     private String vendorName;
-
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public String getVendorName() {
-        return vendorName;
-    }
-
-    public void setVendorName(String vendorName) {
-        this.vendorName = vendorName;
-    }
-
-    public String getProductName() {
-        return productName;
-    }
-    public void setProductName(String productName) {
-        this.productName = productName;
-    }
+    private BigDecimal totalPrice;
+    private BigDecimal payBill;
+    private LocalDateTime productEntryTime;
+    private LocalDateTime recordUpdatedTime;
+    private Boolean isActive;
 }
