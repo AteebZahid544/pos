@@ -3,24 +3,27 @@ package com.example.pos.DTO;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class SalesDto {
 
+    private String productName;
     private String category;
-
-    private String product;
-
     private Integer quantity;
-
     private BigDecimal price;
-
-    private BigDecimal discount;
-
-    private BigDecimal totalAmount;
-
-    private String customerName;
-
-    private BigDecimal amountPaid;
-
+    private BigDecimal totalPrice;
+    private LocalDateTime saleEntryTime;
+    private LocalDateTime recordUpdatedTime;
+    private Boolean isActive;
+    private BigDecimal size;
+    private BigDecimal ktae;
+    private BigDecimal gram;
+    private BigDecimal generalDiscount;
+    private Integer invoiceNumber;
+    private BigDecimal rent;
+    private String description;
+    private BigDecimal grandTotal;
+    private Integer returnedQuantity;
+    private String returnTime;
 }

@@ -6,8 +6,8 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Table(name = "product_sell")
 @Entity
+@Table(name = "sale")
 @Data
 public class SalesEntity {
     @Id
@@ -15,31 +15,56 @@ public class SalesEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(name = "product")
-    private String product;
-
     @Column(name = "category")
     private String category;
 
-    @Column(name = "quantity")
-    private Integer quantity;
+    @Column(name = "product_name")
+    private String productName;
 
     @Column(name = "price")
     private BigDecimal price;
 
-    @Column(name = "discount")
-    private BigDecimal discount;
+    @Column(name = "quantity")
+    private Integer quantity;
+
+    @Column(name = "total_price")
+    private BigDecimal totalPrice;
 
     @Column(name = "customer_name")
     private String customerName;
 
-    @Column(name = "total_amount")
-    private BigDecimal totalAmount;
+    @Column(name="sale_entry_time")
+    LocalDateTime saleEntryTime;
 
-    @Column(name = "amount_paid")
-    private BigDecimal amountPaid;
+    @Column(name="record_updated_time")
+    LocalDateTime recordUpdatedTime;
 
-    @Column(name = "sell_time")
-    private LocalDateTime sellTime;
+    @Column(name="record_deleted_time")
+    LocalDateTime recordDeletedTime;
+
+    @Column(name = "is_Active")
+    private Boolean isActive;
+
+    @Column(name = "size")
+    private BigDecimal size;
+
+    @Column(name = "ktae")
+    private BigDecimal ktae;
+
+    @Column(name = "gram")
+    private BigDecimal gram;
+
+    @Column(name = "invoice_number")
+    private Integer invoiceNumber;
+
+    @Column(name = "returned_quantity")
+    private Integer returnedQuantity;
+
+    @Column(name = "return_time")
+    private LocalDateTime returnTime;
+
+    @Column(name = "status")
+    private String status;
+
 
 }

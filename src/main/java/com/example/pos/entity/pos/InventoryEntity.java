@@ -29,4 +29,12 @@ public class InventoryEntity {
     @Column(name = "product_name")
     public String productName;
 
+    @Column(name = "size")
+    private BigDecimal size;
+
+    @Column(name = "ktae")
+    private BigDecimal ktae;
+
+    @Column(name = "gram")
+    private BigDecimal gram;
 }

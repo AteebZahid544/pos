@@ -9,25 +9,29 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 
 @Entity
-@Table(name="Company_Bill_Amount_Paid")
+@Table(name = "customer_payment_time")
 @Data
-public class CompanyBillAmountPaid {
+public class CustomerPaymentTime {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private int id;
 
-    @Column(name = "vendor_name")
-    private String vendorName;
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "amount_paid")
+    private BigDecimal amountPaid;
+
+    @Column(name = "payment_time")
+    private LocalDateTime paymentTime;
 
     @Convert(converter = YearMonthAttributeConverter.class)
     @Column(name = "billing_month")
     private YearMonth billingMonth;
 
-
-    @Column(name = "balance")
-    private BigDecimal balance;
-
-
-
+    @Column(name = "invoice_number")
+    private int invoiceNumber;
 }
+
+

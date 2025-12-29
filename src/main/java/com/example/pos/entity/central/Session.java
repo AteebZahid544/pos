@@ -17,7 +17,7 @@ public class Session {
     @Column(name = "token", unique = true)
     private String token;
 
-    @Column(name = "phoneNumber")
+    @Column(name = "phone_number")
     private String phoneNumber;
 
     @Column(name = "created_at")

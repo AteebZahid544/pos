@@ -12,10 +12,18 @@ public class ProductDto {
     private String category;
     private Integer quantity;
     private BigDecimal price;
-    private String vendorName;
     private BigDecimal totalPrice;
-    private BigDecimal payBill;
     private LocalDateTime productEntryTime;
     private LocalDateTime recordUpdatedTime;
     private Boolean isActive;
+    private BigDecimal size;
+    private BigDecimal ktae;
+    private BigDecimal gram;
+    private BigDecimal generalDiscount;
+    private Integer invoiceNumber;
+    private BigDecimal rent;
+    private String description;
+    private BigDecimal grandTotal;
+    private Integer returnedQuantity;
+    private String returnTime;
 }

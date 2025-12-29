@@ -69,17 +69,17 @@ public class CategoryService {
         // --- 3. Save category and products in the correct tenant ---
         categoryRepository.save(category);
 
-        return new Status(StatusMessage.SUCCESS, "Category with products saved/updated successfully");
+        return new Status(StatusMessage.SUCCESS, "Category with products saved successfully");
     }
 
 
 
-    public Status updateCategory(CategoryRequestDto dto){
+    public Status updateCategory(int id,CategoryRequestDto dto){
         if (dto.getCategoryName() == null || dto.getCategoryName().isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
         }
 
-        Optional<Category> existingCategoryOpt = categoryRepository.findById(dto.getId());
+        Optional<Category> existingCategoryOpt = categoryRepository.findById(id);
 
         if (existingCategoryOpt.isEmpty() || Boolean.FALSE.equals(existingCategoryOpt.get().getIsActive())) {
             return new Status(StatusMessage.FAILURE, "Category not found");
@@ -93,11 +93,9 @@ public class CategoryService {
         return new Status(StatusMessage.SUCCESS, "Category updated successfully");
     }
 
-    public Status updateProductNameAndPrice( ProductNameDto dtoProduct) {
-        if (dtoProduct.getId() == null) {
-            return new Status(StatusMessage.FAILURE, "Product ID cannot be null");
-        }
-        Optional<ProductName> existingProductOpt = productNameRepository.findProductByIdAndIsActiveTrue(dtoProduct.getId());
+    public Status updateProductNameAndPrice( int id ,ProductNameDto dtoProduct) {
+
+        Optional<ProductName> existingProductOpt = productNameRepository.findProductByIdAndIsActiveTrue(id);
         if (existingProductOpt.isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Product not found");
         }
@@ -151,13 +149,10 @@ public class CategoryService {
         return dto;
     }
 
-    public Status deleteCategoryByName(String categoryName) {
-        if (categoryName == null || categoryName.isEmpty()) {
-            return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
-        }
+    public Status deleteCategoryById(int id) {
 
         Optional<Category> optionalCategory =
-                categoryRepository.findByCategoryNameAndIsActiveTrue(categoryName);
+                categoryRepository.findById(id);
 
         if (optionalCategory.isPresent()) {
             Category category = optionalCategory.get();
@@ -184,11 +179,9 @@ public class CategoryService {
     }
 
 
-    public Status deleteProductById(ProductNameDto productNameDto) {
-        if (productNameDto.getId() == null) {
-            return new Status(StatusMessage.FAILURE, "Product Id cannot be null");
-        }
-        Optional<ProductName> optionalProduct = productNameRepository.findProductByIdAndIsActiveTrue(productNameDto.getId());
+    public Status deleteProductById(int id) {
+
+        Optional<ProductName> optionalProduct = productNameRepository.findProductByIdAndIsActiveTrue(id);
 
         if (optionalProduct.isPresent()) {
             ProductName product = optionalProduct.get();

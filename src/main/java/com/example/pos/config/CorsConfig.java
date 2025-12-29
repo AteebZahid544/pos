@@ -25,7 +25,7 @@ public class CorsConfig {
 
         config.setAllowedHeaders(Arrays.asList(
                 "Content-Type", "X-Requested-With", "accept", "Authorization", "Origin",
-                "Access-Control-Request-Method", "Access-Control-Request-Headers"
+                "Access-Control-Request-Method", "Access-Control-Request-Headers","X-TENANTID"
         ));
         config.setAllowCredentials(false);
         config.setMaxAge(Constant.CORS_MAX_AGE);

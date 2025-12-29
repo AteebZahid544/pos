@@ -18,9 +18,9 @@ public class CategoryController {
     public Status addCategory(@RequestBody CategoryRequestDto dto) {
         return categoryService.saveCategoryWithProducts(dto);
     }
-    @PutMapping("/updateCategory")
-    public Status updateCategory(@RequestBody CategoryRequestDto dto) {
-        return categoryService.updateCategory(dto);
+    @PutMapping("/updateCategory/{id}")
+    public Status updateCategory(@PathVariable int id,@RequestBody CategoryRequestDto dto) {
+        return categoryService.updateCategory(id,dto);
     }
 
     @GetMapping("/getCategories")
@@ -28,17 +28,17 @@ public class CategoryController {
         return categoryService.getCategories(categoryName);
     }
 
-    @DeleteMapping("/deleteCategories")
-    public Status deleteCategory(@RequestParam("categoryName") String categoryName) {
-        return categoryService.deleteCategoryByName(categoryName);
+    @DeleteMapping("/deleteCategories/{id}")
+    public Status deleteCategory(@PathVariable int id) {
+        return categoryService.deleteCategoryById(id);
     }
-    @PutMapping("/updateProductNameOrPrice")
-    public Status updateProductData(@RequestBody ProductNameDto productNameDto) {
-        return categoryService.updateProductNameAndPrice(productNameDto);
+    @PutMapping("/updateProductNameOrPrice/{id}")
+    public Status updateProductData(@PathVariable int id,@RequestBody ProductNameDto productNameDto) {
+        return categoryService.updateProductNameAndPrice(id,productNameDto);
     }
 
-    @DeleteMapping("/deleteProductNameAndPrice")
-    public Status deleteProductData(@RequestBody ProductNameDto productNameDto) {
-        return categoryService.deleteProductById(productNameDto);
+    @DeleteMapping("/deleteProductNameAndPrice/{id}")
+    public Status deleteProductData(@PathVariable int id) {
+        return categoryService.deleteProductById(id);
     }
 }

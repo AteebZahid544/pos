@@ -32,7 +32,7 @@ import java.util.UUID;
 
 @Service
 public class AuthenticationService {
-    private static final int SESSION_EXPIRY_MINUTES = 10;
+    private static final int SESSION_EXPIRY_MINUTES = 20;
 
     @Autowired
     private AuthenticationRepo authenticationRepo;

@@ -24,8 +24,8 @@ public class BillPaymentController {
         return billPaymentService.customerPayBill(customerPayBillDto.getCustomerName(),customerPayBillDto.getAmount());
     }
 
-    @DeleteMapping("/delete/{id}")
-    public Status deleteEntry(@PathVariable int id) {
-        return billPaymentService.deleteEntry(id);
-    }
+//    @DeleteMapping("/delete/{id}")
+//    public Status deleteEntry(@PathVariable int id) {
+//        return billPaymentService.deleteEntry(id);
+//    }
 }

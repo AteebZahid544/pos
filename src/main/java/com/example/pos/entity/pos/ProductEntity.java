@@ -27,11 +27,11 @@ public class ProductEntity {
     @Column(name = "quantity")
     private Integer quantity;
 
+    @Column(name = "returned_quantity")
+    private Integer returnedQuantity;
+
     @Column(name = "total_price")
     private BigDecimal totalPrice;
-
-    @Column(name = "vendor_name")
-    private String vendorName;
 
     @Column(name="product_entry_time")
     LocalDateTime productEntryTime;
@@ -42,7 +42,25 @@ public class ProductEntity {
     @Column(name="record_deleted_time")
     LocalDateTime recordDeletedTime;
 
+    @Column(name="stock_return_time")
+    LocalDateTime returnTime;
+
     @Column(name = "is_Active")
     private Boolean isActive;
+
+    @Column(name = "size")
+    private BigDecimal size;
+
+    @Column(name = "ktae")
+    private BigDecimal ktae;
+
+    @Column(name = "gram")
+    private BigDecimal gram;
+
+    @Column(name = "invoice_number")
+    private Integer invoiceNumber;
+
+    @Column(name = "status")
+    private String status;
 
 }
