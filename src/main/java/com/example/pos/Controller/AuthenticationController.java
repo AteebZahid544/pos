@@ -16,16 +16,23 @@ public class AuthenticationController {
     private AuthenticationService authenticationService;
 
     @PostMapping("/register")
-    public Status registerUser(@RequestBody AuthenticationDto authenticationDto){
+    public Status registerUser(@RequestBody AuthenticationDto authenticationDto) {
         return authenticationService.register(authenticationDto);
     }
+
     @PostMapping("/login")
     public Status login(@RequestBody LoginDto loginDto) {
         return authenticationService.login(loginDto);
     }
+
     @GetMapping("/validate")
     public Status validateToken(@RequestParam String token) {
         return authenticationService.validateSession(token);
+    }
+
+    @GetMapping("/userData/{mobileNumber}")
+    public Status userData(@PathVariable String mobileNumber) {
+        return authenticationService.getUserData(mobileNumber);
     }
 
     @DeleteMapping("/logout")

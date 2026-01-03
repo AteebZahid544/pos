@@ -16,10 +16,13 @@ public interface SalesRepo extends JpaRepository<SalesEntity,Integer> {
             "WHERE s.status = :status")
     Integer findMaxInvoiceNumberByStatus(@Param("status") String status);
 
+    List<SalesEntity> findByCustomerNameAndIsActiveTrue(String customerName);
+
     List<SalesEntity> findByIsActiveTrueAndStatus(String status);
     List<SalesEntity>findByCategoryAndProductName(String category, String productName);
     List<SalesEntity>findByProductName(String productName);
     List<SalesEntity>findByCategory(String category);
     List<SalesEntity>findAllByInvoiceNumberAndStatusAndIsActive(int invoiceNumber,String status, Boolean isActive);
+    List<SalesEntity> findByInvoiceNumberAndIsActive(Integer invoiceNumber, Boolean isActive);
 
 }

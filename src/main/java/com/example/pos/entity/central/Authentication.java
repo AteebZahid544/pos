@@ -29,4 +29,7 @@ public class Authentication {
 
     @Column(name = "database_name")
     private String databaseName;
+
+    @Column(name ="address")
+    private String address;
 }

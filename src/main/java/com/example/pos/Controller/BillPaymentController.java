@@ -1,11 +1,14 @@
 package com.example.pos.Controller;
 
-import com.example.pos.DTO.CompanyPayBillDto;
 import com.example.pos.DTO.CustomerPayBillDto;
+import com.example.pos.DTO.PayBillDto;
 import com.example.pos.Service.BillPaymentService;
 import com.example.pos.util.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/billPayment")
@@ -15,17 +18,32 @@ public class BillPaymentController {
     private BillPaymentService billPaymentService;
 
     @PostMapping("/company_pay_bill")
-    public Status companyPayBill(@RequestBody CompanyPayBillDto companyPayBillDto) {
-        return billPaymentService.payVendorBill(companyPayBillDto.getVendorName(), companyPayBillDto.getAmount());
+    public Status companyPayBill(@RequestBody PayBillDto companyPayBillDto) {
+        return billPaymentService.payVendorBill(companyPayBillDto.getVendorName(), companyPayBillDto.getAmountPaid());
+    }
+
+    @GetMapping("/vendor-balance/{vendorName}")
+    public Status vendorBalance(@PathVariable String vendorName){
+        return billPaymentService.getVendorBalance(vendorName);
+    }
+
+    @GetMapping("/customer-balance/{customerName}")
+    public Status customerBalance(@PathVariable String customerName){
+        return billPaymentService.getCustomerBalance(customerName);
     }
 
     @PostMapping("/customer_pay_bill")
     public Status customerPayBill(@RequestBody CustomerPayBillDto customerPayBillDto){
-        return billPaymentService.customerPayBill(customerPayBillDto.getCustomerName(),customerPayBillDto.getAmount());
+        return billPaymentService.customerPayBill(customerPayBillDto.getCustomerName(),customerPayBillDto.getAmountPaid());
     }
 
-//    @DeleteMapping("/delete/{id}")
-//    public Status deleteEntry(@PathVariable int id) {
-//        return billPaymentService.deleteEntry(id);
-//    }
+    @PutMapping("/update-companyPayBill")
+    public Status updatePayBill(@RequestBody PayBillDto companyBill) {
+        return billPaymentService.updatePayBill(companyBill.getInvoiceNumber(),companyBill.getStatus(), companyBill.getNewAmountPaid(),companyBill.getVendorName(),companyBill.getPaymentTime());
+    }
+
+    @DeleteMapping("/delete-companyPayBill")
+    public Status deleteCompanyPayBill(@RequestBody PayBillDto payBillDto){
+        return billPaymentService.deleteInvoice(payBillDto.getInvoiceNumber(),payBillDto.getStatus(),payBillDto.getPaymentTime(),payBillDto.getVendorName());
+    }
 }

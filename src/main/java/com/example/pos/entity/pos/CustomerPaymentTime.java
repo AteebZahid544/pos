@@ -32,6 +32,9 @@ public class CustomerPaymentTime {
 
     @Column(name = "invoice_number")
     private int invoiceNumber;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
 }
 
 

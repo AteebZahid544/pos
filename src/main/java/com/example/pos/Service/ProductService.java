@@ -164,11 +164,6 @@ public class ProductService {
         // Update company/vendor bill
         updateCompanyBill(vendorName, invoiceTotal, status, null);
 
-
-//        if (payBill != null && payBill.compareTo(BigDecimal.ZERO) > 0) {
-//            handleCompanyPayment(vendorName, payBill, invoiceNumber);
-//        }
-
         CompanyPaymentTime payment = new CompanyPaymentTime();
         payment.setInvoiceNumber(invoiceNumber);
         payment.setVendorName(vendorName);
@@ -217,59 +212,72 @@ public class ProductService {
     }
 
 
-    private void updateCompanyBill(String vendor, BigDecimal totalPrice, String status, BigDecimal oldTotal) {
+    private void updateCompanyBill(String vendor,
+                                   BigDecimal totalPrice,
+                                   String status,
+                                   BigDecimal oldTotal) {
 
         YearMonth currentMonth = YearMonth.now();
 
-        // Check if current month bill exists
         CompanyBillAmountPaid currentMonthRecord =
                 companyBillRepo.findByVendorNameAndBillingMonth(vendor, currentMonth);
 
         if (currentMonthRecord != null) {
+
+            BigDecimal balance = currentMonthRecord.getBalance();
+
             if ("Purchase".equals(status)) {
 
                 if (oldTotal != null) {
-
-                    BigDecimal updatedBalance = currentMonthRecord.getBalance().subtract(oldTotal);
-                    currentMonthRecord.setBalance(updatedBalance);
-                    companyBillRepo.save(currentMonthRecord);
+                    balance = balance.subtract(oldTotal);
                 }
-                // update balance
-                BigDecimal updatedBalance = currentMonthRecord.getBalance().add(totalPrice);
-                currentMonthRecord.setBalance(updatedBalance);
-                companyBillRepo.save(currentMonthRecord);
-                return;
+                balance = balance.add(totalPrice);
+
             } else {
 
                 if (oldTotal != null) {
-
-                    BigDecimal updatedBalance = currentMonthRecord.getBalance().add(oldTotal);
-                    currentMonthRecord.setBalance(updatedBalance);
-                    companyBillRepo.save(currentMonthRecord);
+                    balance = balance.add(oldTotal);
                 }
-                BigDecimal updatedBalance = currentMonthRecord.getBalance().subtract(totalPrice);
-                currentMonthRecord.setBalance(updatedBalance);
-                companyBillRepo.save(currentMonthRecord);
-                return;
+                balance = balance.subtract(totalPrice);
             }
+
+            currentMonthRecord.setBalance(balance);
+            companyBillRepo.save(currentMonthRecord);
+            return;
         }
 
-        // No current month record → fetch last month’s balance
+        // 🔹 New month → carry forward last balance
         CompanyBillAmountPaid lastMonthRecord =
                 companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(vendor);
 
-        BigDecimal carryForwardBalance = (lastMonthRecord != null)
-                ? lastMonthRecord.getBalance()
-                : BigDecimal.ZERO;
+        BigDecimal carryForwardBalance =
+                lastMonthRecord != null ? lastMonthRecord.getBalance() : BigDecimal.ZERO;
 
-        // Create new monthly bill record
+        BigDecimal finalBalance = carryForwardBalance;
+
+        if ("Purchase".equals(status)) {
+
+            if (oldTotal != null) {
+                finalBalance = finalBalance.subtract(oldTotal);
+            }
+            finalBalance = finalBalance.add(totalPrice);
+
+        } else {
+
+            if (oldTotal != null) {
+                finalBalance = finalBalance.add(oldTotal);
+            }
+            finalBalance = finalBalance.subtract(totalPrice);
+        }
+
         CompanyBillAmountPaid newBill = new CompanyBillAmountPaid();
         newBill.setVendorName(vendor);
         newBill.setBillingMonth(currentMonth);
-        newBill.setBalance(carryForwardBalance.add(totalPrice));
+        newBill.setBalance(finalBalance);
 
         companyBillRepo.save(newBill);
     }
+
 
     private void handleCompanyPayment(String vendorName, BigDecimal payBill, int invoiceNumber) {
 
@@ -367,7 +375,10 @@ public class ProductService {
             product.setKtae(dto.getKtae());
             product.setGram(dto.getGram());
             product.setIsActive(true);
-            product.setProductEntryTime(null);
+            if("Purchase".equals(status)){
+                product.setProductEntryTime(null);
+            }else{
+            product.setReturnTime(null);}
             product.setRecordUpdatedTime(LocalDateTime.now());
             product.setStatus(status);
 
@@ -492,6 +503,7 @@ public class ProductService {
             paymentTime.setAmountPaid(payBill);
             paymentTime.setPaymentTime(LocalDateTime.now());
             paymentTime.setBillingMonth(currentMonth);
+            paymentTime.setIsActive(true);
 
             companyPaymentTimeRepo.save(paymentTime);
         }
@@ -557,7 +569,7 @@ public class ProductService {
             dto.setKtae(p.getKtae());
             dto.setGram(p.getGram());
             dto.setIsActive(p.getIsActive());
-            dto.setReturnTime(String.valueOf(p.getReturnTime()));
+            dto.setReturnTime(p.getReturnTime());
 
             int invoiceNo = p.getInvoiceNumber();
             invoiceMap.computeIfAbsent(invoiceNo, k -> new ArrayList<>()).add(dto);
@@ -768,9 +780,7 @@ public class ProductService {
             );
 
             inventory.setTotalPrice(
-                    inventory.getPurchasePrice()
-                            .multiply(BigDecimal.valueOf(inventory.getQuantity()))
-            );
+                   calculateInventoryTotal(inventory));
 
             inventoryRepo.save(inventory);
 

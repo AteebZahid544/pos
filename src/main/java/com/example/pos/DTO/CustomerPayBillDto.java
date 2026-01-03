@@ -8,5 +8,5 @@ import java.math.BigDecimal;
 @Data
 public class CustomerPayBillDto {
     private String customerName;
-    private BigDecimal amount;
+    private BigDecimal amountPaid;
 }

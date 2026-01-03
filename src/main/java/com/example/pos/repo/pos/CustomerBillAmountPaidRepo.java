@@ -9,13 +9,14 @@ import org.springframework.stereotype.Repository;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CustomerBillAmountPaidRepo extends JpaRepository<CustomerBillAmountPaid,String> {
 
     CustomerBillAmountPaid findById(int id);
 
-    CustomerBillAmountPaid findByCustomerName(String customerName);
+    Optional<CustomerBillAmountPaid> findByCustomerName(String customerName);
     CustomerBillAmountPaid findTopByCustomerNameOrderByIdDesc(String customerName);
 
     @Query(value = "SELECT cb.* FROM customers_balance cb " +
@@ -30,6 +31,8 @@ public interface CustomerBillAmountPaidRepo extends JpaRepository<CustomerBillAm
     CustomerBillAmountPaid findByCustomerNameAndBillingMonth(String customer, YearMonth billingMonth);
 
     CustomerBillAmountPaid findTopByCustomerNameOrderByBillingMonthDesc(String customer);
+
+
 
 }
 

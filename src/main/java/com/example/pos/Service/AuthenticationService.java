@@ -207,4 +207,11 @@ public class AuthenticationService {
 
         return new Status(StatusMessage.SUCCESS, "Logged out successfully");
     }
+
+    public Status getUserData(String mobileNumber){
+        Optional<Authentication> authentication= authenticationRepo.findByPhoneNumber(mobileNumber);
+
+            return new Status(StatusMessage.SUCCESS,authentication);
+
+    }
 }

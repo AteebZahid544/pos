@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -49,6 +50,8 @@ public class SalesService {
                               String customerName,
                               BigDecimal payBill,
                               String status) {
+
+        YearMonth currentMonth= YearMonth.now();
 
         if (productDtos == null || productDtos.isEmpty()) {
             return new Status(StatusMessage.FAILURE, "Product details are missing");
@@ -227,10 +230,22 @@ public class SalesService {
 
         updateCustomerBill(customerName, invoiceTotal, status, null);
 
+
+
+        if ("Sale".equals(status)){
+        CustomerPaymentTime payment = new CustomerPaymentTime();
+        payment.setInvoiceNumber(invoiceNumber);
+        payment.setCustomerName(customerName);
+        payment.setAmountPaid(payBill);
+        payment.setPaymentTime(LocalDateTime.now());
+        payment.setBillingMonth(currentMonth);
+        payment.setIsActive(true);
+
+        customerPaymentTimeRepo.save(payment);}
         // --- Handle payment ---
-        if (payBill != null && payBill.compareTo(BigDecimal.ZERO) > 0) {
-            handleCustomerPayment(customerName, payBill, invoiceNumber);
-        }
+//        if (payBill != null && payBill.compareTo(BigDecimal.ZERO) > 0) {
+//            handleCustomerPayment(customerName, payBill, invoiceNumber);
+//        }
 
         return new Status(StatusMessage.SUCCESS, "Products sold successfully");
     }
@@ -269,58 +284,71 @@ public class SalesService {
     }
 
 
-    private void updateCustomerBill(String customer, BigDecimal totalPrice, String status, BigDecimal oldTotal) {
+    private void updateCustomerBill(String customer,
+                                   BigDecimal totalPrice,
+                                   String status,
+                                   BigDecimal oldTotal) {
 
         YearMonth currentMonth = YearMonth.now();
 
-        // Check if current month bill exists
         CustomerBillAmountPaid currentMonthRecord =
                 customerBillRepo.findByCustomerNameAndBillingMonth(customer, currentMonth);
 
         if (currentMonthRecord != null) {
-            if("Sale".equals(status)){
-                if (oldTotal!=null){
 
-                    BigDecimal updatedBalance = currentMonthRecord.getBalance().subtract(oldTotal);
-                    currentMonthRecord.setBalance(updatedBalance);
-                    customerBillRepo.save(currentMonthRecord);
+            BigDecimal balance = currentMonthRecord.getBalance();
+
+            if ("Sale".equals(status)) {
+
+                if (oldTotal != null) {
+                    balance = balance.subtract(oldTotal);
                 }
+                balance = balance.add(totalPrice);
 
-            BigDecimal updatedBalance = currentMonthRecord.getBalance().add(totalPrice);
-            currentMonthRecord.setBalance(updatedBalance);
+            } else {
+
+                if (oldTotal != null) {
+                    balance = balance.add(oldTotal);
+                }
+                balance = balance.subtract(totalPrice);
+            }
+
+            currentMonthRecord.setBalance(balance);
             customerBillRepo.save(currentMonthRecord);
             return;
-        }else{
-                if (oldTotal!=null){
-
-                        BigDecimal updatedBalance = currentMonthRecord.getBalance().add(oldTotal);
-                        currentMonthRecord.setBalance(updatedBalance);
-                        customerBillRepo.save(currentMonthRecord);
-                }
-                BigDecimal updatedBalance = currentMonthRecord.getBalance().subtract(totalPrice);
-                currentMonthRecord.setBalance(updatedBalance);
-                customerBillRepo.save(currentMonthRecord);
-                return;
-            }
         }
 
-        // No current month record → fetch last month’s balance
+        // 🔹 New month → carry forward last balance
         CustomerBillAmountPaid lastMonthRecord =
                 customerBillRepo.findTopByCustomerNameOrderByBillingMonthDesc(customer);
 
-        BigDecimal carryForwardBalance = (lastMonthRecord != null)
-                ? lastMonthRecord.getBalance()
-                : BigDecimal.ZERO;
+        BigDecimal carryForwardBalance =
+                lastMonthRecord != null ? lastMonthRecord.getBalance() : BigDecimal.ZERO;
 
-        // Create new monthly bill record
+        BigDecimal finalBalance = carryForwardBalance;
+
+        if ("Sale".equals(status)) {
+
+            if (oldTotal != null) {
+                finalBalance = finalBalance.subtract(oldTotal);
+            }
+            finalBalance = finalBalance.add(totalPrice);
+
+        } else {
+
+            if (oldTotal != null) {
+                finalBalance = finalBalance.add(oldTotal);
+            }
+            finalBalance = finalBalance.subtract(totalPrice);
+        }
+
         CustomerBillAmountPaid newBill = new CustomerBillAmountPaid();
         newBill.setCustomerName(customer);
         newBill.setBillingMonth(currentMonth);
-        newBill.setBalance(carryForwardBalance.add(totalPrice));
+        newBill.setBalance(finalBalance);
 
         customerBillRepo.save(newBill);
     }
-
     private void handleCustomerPayment(String customerName,
                                        BigDecimal payBill,
                                        int invoiceNumber) {
@@ -413,7 +441,7 @@ public class SalesService {
             dto.setGram(s.getGram());
             dto.setIsActive(s.getIsActive());
             dto.setReturnedQuantity(s.getReturnedQuantity());
-            dto.setReturnTime(String.valueOf(s.getReturnTime()));
+            dto.setReturnTime(s.getReturnTime());
 
             int invoiceNo = s.getInvoiceNumber();
             invoiceMap.computeIfAbsent(invoiceNo, k -> new ArrayList<>()).add(dto);
@@ -536,33 +564,6 @@ public class SalesService {
             salesRepo.save(old);
         }
 
-    /* =====================================================
-       STEP 3: REVERSE OLD INVOICE EFFECT FROM CUSTOMER BILL
-       ===================================================== */
-        if (!"Return".equalsIgnoreCase(status)) {
-
-            BigDecimal oldPaid =
-                    oldInvoice.getAmountPaid() != null
-                            ? oldInvoice.getAmountPaid()
-                            : BigDecimal.ZERO;
-
-            BigDecimal oldActualAmount =
-                    oldInvoice.getGrandTotal().subtract(oldPaid);
-
-            CustomerBillAmountPaid oldBill =
-                    customerBillRepo.findByCustomerNameAndBillingMonth(
-                            oldInvoice.getCustomerName(),
-                            billingMonth
-                    );
-
-            if (oldBill != null) {
-                oldBill.setBalance(
-                        oldBill.getBalance().subtract(oldActualAmount)
-                );
-                customerBillRepo.save(oldBill);
-            }
-        }
-
         oldInvoice.setIsActive(false);
         customerInvoiceRecordRepo.save(oldInvoice);
 
@@ -680,40 +681,18 @@ public class SalesService {
         customerInvoiceRecordRepo.save(newInvoice);
 
     /* =====================================================
-       STEP 7: APPLY NEW BILL BALANCE
-       ===================================================== */
-        if (!"Return".equalsIgnoreCase(status)) {
-
-            BigDecimal paid =
-                    amountPaid != null ? amountPaid : BigDecimal.ZERO;
-
-            BigDecimal newActualAmount =
-                    newInvoiceTotal.subtract(paid);
-
-            CustomerBillAmountPaid newBill =
-                    customerBillRepo.findByCustomerNameAndBillingMonth(
-                            customerName, billingMonth);
-
-            if (newBill == null) {
-                newBill = new CustomerBillAmountPaid();
-                newBill.setCustomerName(customerName);
-                newBill.setBillingMonth(billingMonth);
-                newBill.setBalance(newActualAmount);
-            } else {
-                newBill.setBalance(
-                        newBill.getBalance().add(newActualAmount)
-                );
-            }
-
-            customerBillRepo.save(newBill);
-        }
-
-    /* =====================================================
        STEP 8: SAVE PAYMENT ENTRY (OPTIONAL)
        ===================================================== */
         if (!"Return".equalsIgnoreCase(status)
                 && amountPaid != null
                 && amountPaid.compareTo(BigDecimal.ZERO) > 0) {
+
+            Optional<CustomerPaymentTime> customerPaymentTime=customerPaymentTimeRepo.findByInvoiceNumberAndIsActive(invoiceNumber,true);
+            if (customerPaymentTime.isPresent()){
+                CustomerPaymentTime customerPaymentTime1=customerPaymentTime.get();
+                customerPaymentTime1.setIsActive(false);
+                customerPaymentTimeRepo.save(customerPaymentTime1);
+            }
 
             CustomerPaymentTime payment = new CustomerPaymentTime();
             payment.setInvoiceNumber(invoiceNumber);
@@ -721,6 +700,7 @@ public class SalesService {
             payment.setAmountPaid(amountPaid);
             payment.setPaymentTime(LocalDateTime.now());
             payment.setBillingMonth(billingMonth);
+            payment.setIsActive(true);
 
             customerPaymentTimeRepo.save(payment);
         }
@@ -738,12 +718,22 @@ public class SalesService {
 
         for (SalesEntity product : products) {
             Integer oldQuantity = product.getQuantity();
+            Integer oldReturnedQuantity= product.getReturnedQuantity();
 
             InventoryEntity inventory = inventoryRepo.findByCategoryAndProductName(product.getCategory(), product.getProductName());
             if (inventory != null) {
+                if ("Sale".equals(status)){
                 Integer newQuantity = inventory.getQuantity() + oldQuantity;
                 inventory.setQuantity(newQuantity);
+                inventory.setTotalPrice(calculateInventoryTotal(inventory));
                 inventoryRepo.save(inventory);
+
+                }else{
+                    Integer newQuantity = inventory.getQuantity() - oldReturnedQuantity;
+                    inventory.setQuantity(newQuantity);
+                    inventory.setTotalPrice(calculateInventoryTotal(inventory));
+                    inventoryRepo.save(inventory);
+                }
             }
 
             product.setIsActive(false);
@@ -760,18 +750,35 @@ public class SalesService {
         customerInvoiceRecord.setIsActive(false);
         customerInvoiceRecordRepo.save(customerInvoiceRecord);
 
-        CustomerBillAmountPaid customerBillAmountPaid = customerBillRepo.findByCustomerName(customerInvoiceRecord.getCustomerName());
+        CustomerBillAmountPaid customerBillAmountPaid = customerBillRepo.findByCustomerNameAndBillingMonth(customerInvoiceRecord.getCustomerName(),customerInvoiceRecord.getBillingMonth());
         if (customerBillAmountPaid != null) {
-            BigDecimal oldGrandTotal = customerInvoiceRecord.getGrandTotal().subtract(customerInvoiceRecord.getAmountPaid());
-            BigDecimal newBalance = customerBillAmountPaid.getBalance().subtract(oldGrandTotal);
-            customerBillAmountPaid.setBalance(newBalance);
-            customerBillRepo.save(customerBillAmountPaid);
+            if ("Sale".equals(status)){
+                BigDecimal oldGrandTotal = customerInvoiceRecord.getGrandTotal();
+                BigDecimal newBalance = customerBillAmountPaid.getBalance().subtract(oldGrandTotal);
+                customerBillAmountPaid.setBalance(newBalance);
+                customerBillRepo.save(customerBillAmountPaid);
+            }else{
+                BigDecimal oldGrandTotal = customerInvoiceRecord.getGrandTotal();
+                BigDecimal newBalance = customerBillAmountPaid.getBalance().add(oldGrandTotal);
+                customerBillAmountPaid.setBalance(newBalance);
+                customerBillRepo.save(customerBillAmountPaid);
+            }
+
+        }
+
+        Optional<CustomerPaymentTime> customerPaymentTime=customerPaymentTimeRepo.findByInvoiceNumberAndIsActive(invoiceNumber,true);
+
+        if (customerPaymentTime.isPresent()){
+            CustomerPaymentTime customerPaymentTime1= customerPaymentTime.get();
+            customerPaymentTime1.setIsActive(false);
+            customerPaymentTimeRepo.save(customerPaymentTime1);
         }
 
 
         return new Status(StatusMessage.SUCCESS, "Record is deleted");
 
     }
+
 
 
 //    public Status getCustomerBalance(String customerName) {

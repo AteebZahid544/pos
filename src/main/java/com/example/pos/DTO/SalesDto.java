@@ -25,5 +25,5 @@ public class SalesDto {
     private String description;
     private BigDecimal grandTotal;
     private Integer returnedQuantity;
-    private String returnTime;
+    private LocalDateTime returnTime;
 }

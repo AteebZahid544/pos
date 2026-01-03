@@ -1,19 +1,18 @@
 package com.example.pos.Service;
 
-import com.example.pos.entity.pos.CompanyBillAmountPaid;
-import com.example.pos.entity.pos.CompanyPaymentTime;
-import com.example.pos.entity.pos.CustomerBillAmountPaid;
-import com.example.pos.repo.pos.CompanyBillAmountPaidRepo;
-import com.example.pos.repo.pos.CompanyPaymentTimeRepo;
-import com.example.pos.repo.pos.CustomerBillAmountPaidRepo;
+import com.example.pos.entity.pos.*;
+import com.example.pos.repo.pos.*;
 
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
+import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 
 @Service
 public class BillPaymentService {
@@ -27,8 +26,16 @@ public class BillPaymentService {
     @Autowired
     private CustomerBillAmountPaidRepo customerBillRepo;
 
+    @Autowired
+
+    private CustomerPaymentTimeRepo customerPaymentTimeRepo;
+
+    @Autowired
+    private CompanyInvoiceAmountRepo companyInvoiceAmountRepo;
+
     public Status payVendorBill(String vendorName, BigDecimal amount) {
-        CompanyBillAmountPaid bill = companyBillRepo.findByVendorName(vendorName);
+        YearMonth currentMonth = YearMonth.now();
+        CompanyBillAmountPaid bill = companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(vendorName);
         if (bill == null) {
             return new Status(StatusMessage.FAILURE, "No bill record found for vendor: " + vendorName);
         }
@@ -42,47 +49,183 @@ public class BillPaymentService {
         paymentTime.setVendorName(vendorName);
         paymentTime.setAmountPaid(amount);
         paymentTime.setPaymentTime(LocalDateTime.now());
+        paymentTime.setBillingMonth(currentMonth);
+        paymentTime.setIsActive(true);
         companyPaymentTimeRepo.save(paymentTime);
 
         return new Status(StatusMessage.SUCCESS, "Payment successful. Updated balance: " + newBalance);
     }
 
-    public Status customerPayBill(String name, BigDecimal amount){
+    public Status customerPayBill(String name, BigDecimal amount) {
+        YearMonth currentMonth = YearMonth.now();
+
         CustomerBillAmountPaid bills = customerBillRepo
-                .findTopByCustomerNameOrderByIdDesc(name);
+                .findTopByCustomerNameOrderByBillingMonthDesc(name);
 
         BigDecimal newBalance = bills.getBalance().subtract(amount);
-        // create a new entry
-        CustomerBillAmountPaid updated = new CustomerBillAmountPaid();
-        updated.setCustomerName(name);
-        updated.setBalance(newBalance);
 
-        return new Status(StatusMessage.SUCCESS,customerBillRepo.save(updated));
+        bills.setBalance(newBalance);
+
+        CustomerPaymentTime paymentTime = new CustomerPaymentTime();
+        paymentTime.setCustomerName(name);
+        paymentTime.setAmountPaid(amount);
+        paymentTime.setPaymentTime(LocalDateTime.now());
+        paymentTime.setBillingMonth(currentMonth);
+        paymentTime.setIsActive(true);
+        customerPaymentTimeRepo.save(paymentTime);
+
+        return new Status(StatusMessage.SUCCESS, "Payment successful. Updated balance: " + newBalance);
     }
 
-//    public Status deleteEntry(int id) {
-//
-//        CustomersBill entry = customerBillRepo.findById(id);
-//
-//        CustomersBill bills = customerBillRepo
-//                .findTopByCustomerNameOrderByIdDesc(entry.getCustomerName());
-//
-//        // add back deducted amount
-//        BigDecimal updatedBalance = bills.getBalance().add(entry.getBillPaid());
-//
-//        // make new balance entry
-//        CustomersBill revert = new CustomersBill();
-//        revert.setCustomerName(entry.getCustomerName());
-//        revert.setBalance(updatedBalance);
-//        revert.setDeletePayment(entry.getBillPaid());
-//        revert.setDeletePaymentTime(LocalDateTime.now());
-//        revert.setBillPaid(BigDecimal.ZERO);
-//        customerBillRepo.save(revert);
-//
-//        // delete wrong entry
-//        customerBillRepo.delete(entry);
-//
-//        return new Status(StatusMessage.SUCCESS,"The payment entry has been deleted");
-//    }
+    public Status getVendorBalance(String vendorName) {
+        CompanyBillAmountPaid companyBillAmountPaid = companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(vendorName);
+        if (companyBillAmountPaid == null) {
+            return new Status(StatusMessage.SUCCESS, "No Balance found");
+        }
+        return new Status(StatusMessage.SUCCESS, companyBillAmountPaid.getBalance());
 
+    }
+
+    public Status getCustomerBalance(String customerName) {
+        CustomerBillAmountPaid customerBillAmountPaid = customerBillRepo.findTopByCustomerNameOrderByBillingMonthDesc(customerName);
+        if (customerBillAmountPaid == null) {
+            return new Status(StatusMessage.SUCCESS, "No Balance found");
+        }
+        return new Status(StatusMessage.SUCCESS, customerBillAmountPaid.getBalance());
+
+    }
+
+    @Transactional
+    public Status updatePayBill(int invoiceNumber,
+                                String status,
+                                BigDecimal newAmountPaid,
+                                String vendorName,
+                                LocalDateTime paymentTimeFrontEnd) {
+
+        // =========================
+        // CASE 2: invoiceNumber = 0
+        // =========================
+        if (invoiceNumber == 0) {
+
+            // Find payment time record by vendor and exact payment time
+            CompanyPaymentTime paymentTimeRecord =
+                    companyPaymentTimeRepo.findByVendorNameAndPaymentTime(vendorName, paymentTimeFrontEnd);
+            if (paymentTimeRecord==null){
+                return new Status(StatusMessage.FAILURE,"This Record is already deleted");
+            }
+
+            BigDecimal oldAmountPaid =
+                    paymentTimeRecord.getAmountPaid() == null
+                            ? BigDecimal.ZERO
+                            : paymentTimeRecord.getAmountPaid();
+
+            BigDecimal difference = newAmountPaid.subtract(oldAmountPaid);
+
+            // Update payment time record
+            paymentTimeRecord.setAmountPaid(newAmountPaid);
+            paymentTimeRecord.setPaymentTime(LocalDateTime.now());
+            companyPaymentTimeRepo.save(paymentTimeRecord);
+
+            // Update company bill balance
+            CompanyBillAmountPaid bill =
+                    companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(vendorName);
+
+            bill.setBalance(bill.getBalance().subtract(difference));
+            companyBillRepo.save(bill);
+
+            return new Status(StatusMessage.SUCCESS, "Payment updated successfully");
+        }
+
+        // =========================
+        // CASE 1: invoiceNumber > 0
+        // =========================
+        if (invoiceNumber > 0 && "Purchase".equalsIgnoreCase(status)) {
+
+
+            CompanyInvoiceAmount invoice =
+                    companyInvoiceAmountRepo.findByInvoiceNumberAndStatusAndIsActive(invoiceNumber, status,true)
+                            .orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+            BigDecimal oldAmountPaid =
+                    invoice.getAmountPaid() == null ? BigDecimal.ZERO : invoice.getAmountPaid();
+
+            BigDecimal difference = newAmountPaid.subtract(oldAmountPaid);
+
+            // Update invoice
+            invoice.setAmountPaid(newAmountPaid);
+            invoice.setGrandTotal(invoice.getGrandTotal().subtract(difference));
+            companyInvoiceAmountRepo.save(invoice);
+
+            // Update bill balance
+            CompanyBillAmountPaid bill =
+                    companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(invoice.getVendorName());
+
+            bill.setBalance(bill.getBalance().subtract(difference));
+            companyBillRepo.save(bill);
+
+            // Update payment time
+            CompanyPaymentTime paymentTime =
+                    companyPaymentTimeRepo.findByInvoiceNumberAndIsActive(invoiceNumber,true)
+                            .orElse(new CompanyPaymentTime());
+
+            paymentTime.setInvoiceNumber(invoiceNumber);
+            paymentTime.setVendorName(invoice.getVendorName());
+            paymentTime.setAmountPaid(newAmountPaid);
+            paymentTime.setPaymentTime(LocalDateTime.now());
+            paymentTime.setBillingMonth(YearMonth.now());
+            paymentTime.setIsActive(true);
+
+            companyPaymentTimeRepo.save(paymentTime);
+
+        }
+        return new Status(StatusMessage.SUCCESS,"PayBill updated successfully");
+
+}
+
+    public Status deleteInvoice(int invoiceNumber, String status, LocalDateTime payTime, String vendorName) {
+
+        if (invoiceNumber > 0 && "Purchase".equalsIgnoreCase(status)) {
+
+        CompanyInvoiceAmount invoice =
+                companyInvoiceAmountRepo.findByInvoiceNumberAndStatusAndIsActive(invoiceNumber, status,true)
+                        .orElseThrow(() -> new RuntimeException("Invoice not found"));
+
+        BigDecimal paidAmount =
+                invoice.getAmountPaid() == null ? BigDecimal.ZERO : invoice.getAmountPaid();
+
+        // 🔹 Reverse vendor balance
+        CompanyBillAmountPaid bill =
+                companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(invoice.getVendorName());
+
+        bill.setBalance(bill.getBalance().add(paidAmount));
+        companyBillRepo.save(bill);
+
+        BigDecimal newPaidAmount= invoice.getAmountPaid().subtract(paidAmount);
+        BigDecimal newGrandTotal= invoice.getGrandTotal().subtract(paidAmount);
+        invoice.setAmountPaid(newPaidAmount);
+        invoice.setGrandTotal(newGrandTotal);
+        companyInvoiceAmountRepo.save(invoice);
+
+        CompanyPaymentTime companyPaymentTime= companyPaymentTimeRepo.findByVendorNameAndPaymentTime(bill.getVendorName(),payTime);
+
+        if (companyPaymentTime!=null){
+            companyPaymentTime.setIsActive(false);
+            companyPaymentTimeRepo.save(companyPaymentTime);
+        }
+
+}else {
+            CompanyPaymentTime companyPaymentTime=companyPaymentTimeRepo.findByVendorNameAndPaymentTime(vendorName,payTime);
+            if (companyPaymentTime!=null){
+                companyPaymentTime.setIsActive(false);
+                companyPaymentTimeRepo.save(companyPaymentTime);
+            }
+            BigDecimal oldPayment= companyPaymentTime.getAmountPaid() == null ? BigDecimal.ZERO : companyPaymentTime.getAmountPaid();
+
+            CompanyBillAmountPaid companyBillAmountPaid= companyBillRepo.findTopByVendorNameOrderByBillingMonthDesc(vendorName);
+            BigDecimal newBalance= companyBillAmountPaid.getBalance().add(oldPayment);
+            companyBillAmountPaid.setBalance(newBalance);
+            companyBillRepo.save(companyBillAmountPaid);
+        }
+        return new Status(StatusMessage.SUCCESS,"Invoice deleted successfully");
+}
 }

@@ -8,8 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface AuthenticationRepo extends JpaRepository<Authentication,String> {
-    Optional<Authentication> findByUsernameAndPassword(String username, String password);
-    Optional<Authentication> findByUsername(String username);
+
     Optional<Authentication> findByEmail(String email);
     Optional<Authentication> findByPhoneNumber(String phoneNumber);
 }
