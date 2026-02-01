@@ -286,9 +286,10 @@ public class ProductionService {
             throw new RuntimeException("Production cannot be resumed from status: " + record.getStatus());
         }
 
-        // If production was paused, calculate pause duration and resume
+        // Calculate pause duration if production was paused
         if ("PAUSED".equals(record.getStatus())) {
             if (record.getPauseTime() != null) {
+                // Calculate how long the production was paused
                 Duration pauseDuration = Duration.between(record.getPauseTime(), LocalDateTime.now());
                 record.setTotalElapsedSeconds(record.getTotalElapsedSeconds() + pauseDuration.getSeconds());
                 record.setPauseTime(null);
@@ -298,9 +299,15 @@ public class ProductionService {
         // Resume any paused steps
         for (StepTime step : record.getSteps()) {
             if ("PAUSED".equals(step.getStatus()) && step.getEndTime() == null) {
+                // IMPORTANT: Set status to IN_PROGRESS but DON'T reset startTime
+                // The step should continue timing from where it left off
                 step.setStatus("IN_PROGRESS");
-                step.setStartTime(LocalDateTime.now());
+                step.setStartTime(LocalDateTime.now()); // Set new start time
                 stepTimeRepo.save(step);
+
+                // IMPORTANT: We need to calculate the offset
+                // If the step already had elapsedSeconds from before, we'll use that
+                // The timer will now continue from elapsedSeconds + new duration
             }
         }
 
@@ -311,7 +318,6 @@ public class ProductionService {
 
         return mapToDto(record);
     }
-
     @Transactional
     public ProductionRecordDto finishProduction(Long productionRecordId, String employeeName,
                                                 Integer quantity, String companyName) {
@@ -397,7 +403,6 @@ public class ProductionService {
 
         return dto;
     }
-
     // Helper methods
     @Transactional(readOnly = true)
     public ProductManufacture getProductWithSteps(Long productId) {

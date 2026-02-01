@@ -6,6 +6,7 @@ import com.example.pos.DTO.ProductionRecordDto;
 import com.example.pos.DTO.StepTimeResponseDto;
 import com.example.pos.Service.ProductionService;
 import com.example.pos.entity.pos.ProductManufacture;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -183,5 +184,10 @@ public class ProductionController {
     @Transactional(readOnly = true)
     public List<ProductionRecordDto> getPausedProductions() {
         return service.getPausedProductions();
+    }
+
+    @GetMapping("/{id}/elapsed-time")
+    public ResponseEntity<ProductionRecordDto> getProductionWithElapsedTime(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getProductionWithElapsedTime(id));
     }
 }

@@ -22,8 +22,11 @@ public interface ProductionRecordRepository extends JpaRepository<ProductionReco
     List<ProductionRecord> findByUserIdAndEndTimeIsNullWithSteps(@Param("userId") Long userId);
 
     // Find production by ID with steps
-    @Query("SELECT DISTINCT pr FROM ProductionRecord pr LEFT JOIN FETCH pr.steps WHERE pr.id = :id")
-    Optional<ProductionRecord> findByIdWithSteps(@Param("id") Long id);
+    // In ProductionRecordRepository.java
+    @Query("SELECT pr FROM ProductionRecord pr " +
+            "LEFT JOIN FETCH pr.steps " +
+            "WHERE pr.id = :id")
+    Optional<ProductionRecord> findByIdWithSteps(Long id);
 
 
     @Query("SELECT DISTINCT pr FROM ProductionRecord pr LEFT JOIN FETCH pr.steps WHERE pr.userId = :userId AND pr.status = :status AND pr.endTime IS NULL ORDER BY pr.startTime DESC")
