@@ -2,7 +2,7 @@ package com.example.pos.Service;
 
 import com.example.pos.DTO.CategoryRequestDto;
 import com.example.pos.DTO.ProductNameDto;
-import com.example.pos.config.CurrentTenantIdentifierResolverImpl;
+
 import com.example.pos.entity.pos.Category;
 import com.example.pos.entity.pos.ProductName;
 import com.example.pos.repo.pos.CategoryRepository;
@@ -34,32 +34,45 @@ public class CategoryService {
             return new Status(StatusMessage.FAILURE, "Category name cannot be empty");
         }
 
-        // --- 1. Check existing category ---
-        Category category = categoryRepository
-                .findByCategoryNameAndIsActiveTrue(dto.getCategoryName())
-                .orElseGet(() -> {
-                    Category c = new Category();
-                    c.setCategoryName(dto.getCategoryName());
-                    c.setIsActive(true);
-                    c.setProducts(new ArrayList<>());
-                    return c;
-                });
+        // --- 1. Check existing category (case-insensitive) ---
+        // First, find any active category with same name (case-insensitive)
+        List<Category> existingCategories = categoryRepository
+                .findAllByIsActiveTrue()  // Changed to findAllByIsActiveTrue()
+                .stream()
+                .filter(c -> c.getCategoryName().equalsIgnoreCase(dto.getCategoryName()))
+                .toList();
 
-        // --- 2. Check for duplicate products ---
+        Category category;
+        if (existingCategories.isEmpty()) {
+            // No existing category with this name (case-insensitive), create new one
+            category = new Category();
+            category.setCategoryName(dto.getCategoryName());
+            category.setIsActive(true);
+            category.setProducts(new ArrayList<>());
+        } else {
+            // Use the existing category
+            category = existingCategories.get(0);
+        }
+
+        // --- 2. Check for duplicate products (case-insensitive) ---
         List<String> existingProductNames = category.getProducts().stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsActive()))  // Safe null check
                 .map(ProductName::getProductName)
                 .map(String::toLowerCase)
                 .toList();
 
         for (ProductNameDto pDto : dto.getProducts()) {
-            if (existingProductNames.contains(pDto.getProductName().toLowerCase())) {
+            String newProductNameLower = pDto.getProductName().toLowerCase();
+
+            if (existingProductNames.contains(newProductNameLower)) {
                 return new Status(StatusMessage.FAILURE,
                         "Product '" + pDto.getProductName() + "' already exists against this category");
             }
 
             ProductName product = new ProductName();
             product.setProductName(pDto.getProductName());
-            product.setProductPrice(pDto.getProductPrice());
+            product.setPurchasePrice(pDto.getPurchasePrice());
+            product.setSellPrice(pDto.getSellPrice());
             product.setIsActive(true);
             product.setCategory(category);
 
@@ -71,7 +84,6 @@ public class CategoryService {
 
         return new Status(StatusMessage.SUCCESS, "Category with products saved successfully");
     }
-
 
 
     public Status updateCategory(int id,CategoryRequestDto dto){
@@ -103,8 +115,11 @@ public class CategoryService {
         if (dtoProduct.getProductName()!=null) {
             existingProduct.setProductName(dtoProduct.getProductName());
         }
-        if (dtoProduct.getProductPrice() != null) {
-            existingProduct.setProductPrice(dtoProduct.getProductPrice());
+        if (dtoProduct.getPurchasePrice() != null) {
+            existingProduct.setPurchasePrice(dtoProduct.getPurchasePrice());
+        }
+        if (dtoProduct.getSellPrice() != null) {
+            existingProduct.setSellPrice(dtoProduct.getSellPrice());
         }
         productNameRepository.save(existingProduct);
         return new Status(StatusMessage.SUCCESS, "Product name or price updated successfully");
@@ -140,7 +155,9 @@ public class CategoryService {
                     ProductNameDto productDto = new ProductNameDto();
                     productDto.setId(product.getId());
                     productDto.setProductName(product.getProductName());
-                    productDto.setProductPrice(product.getProductPrice());
+                    productDto.setPurchasePrice(product.getPurchasePrice());
+                    productDto.setSellPrice(product.getSellPrice());
+
                     return productDto;
                 })
                 .collect(Collectors.toList());

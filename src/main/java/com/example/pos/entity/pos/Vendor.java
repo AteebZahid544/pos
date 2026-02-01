@@ -15,6 +15,9 @@ public class Vendor {
     @Column(name = "vendor_name")
     private String vendorName;
 
+    @Column(name = "contact_number")
+    private String phoneNumber;
+
     @Column(name = "address")
     private String address;
 

@@ -47,6 +47,12 @@ public class Status {
         this.returnId = returnId;
     }
 
+    public Status(final StatusMessage statusMessage, final String message, final Long returnId) {
+        this.setCode(statusMessage.getId());
+        this.message = message;
+        this.returnId = returnId;
+    }
+
     public Status(final StatusMessage statusMessage, final Object additionalDetail) {
         this.setCode(statusMessage.getId());
         this.setMessage(statusMessage.getDescription());

@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface CustomerRepository extends JpaRepository<Customers, Long> {
 
-    Customers findByCustomerName(String name);
+    Customers findByCustomerNameAndIsActiveTrue(String name);
     List<Customers>findByIsActive(Boolean isActive);
     Optional<Customers> findById(Long id);
 }

@@ -24,6 +24,12 @@ public class SalesEntity {
     @Column(name = "price")
     private BigDecimal price;
 
+    @Column(name = "purchase_price") // ✅ NEW: Purchase price at time of sale
+    private BigDecimal purchasePrice;
+
+    @Column(name = "purchase_cost") // ✅ NEW: Purchase price at time of sale
+    private BigDecimal purchaseCost;
+
     @Column(name = "quantity")
     private Integer quantity;
 

@@ -21,8 +21,11 @@ public class ProductName {
     @Column(name = "product_name")
     private String productName;
 
-    @Column(name = "product_price")
-    private BigDecimal productPrice;
+    @Column(name = "purchase_price")
+    private BigDecimal purchasePrice;
+
+    @Column(name = "sell_price")
+    private BigDecimal sellPrice;
 
     @Column(name = "is_active")
     private Boolean isActive;

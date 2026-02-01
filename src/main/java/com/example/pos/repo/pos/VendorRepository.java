@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface VendorRepository extends JpaRepository<Vendor, Long> {
 
-    Vendor findByVendorName(String name);
+    Vendor findByVendorNameAndIsActiveTrue(String name);
     List<Vendor>findByIsActive(Boolean isActive);
     Optional<Vendor> findById(Long id);
 }

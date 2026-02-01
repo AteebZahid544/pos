@@ -11,4 +11,7 @@ public interface AuthenticationRepo extends JpaRepository<Authentication,String>
 
     Optional<Authentication> findByEmail(String email);
     Optional<Authentication> findByPhoneNumber(String phoneNumber);
+    Optional<Authentication> findByDatabaseNameAndRole(String databaseName,String role);
+    boolean existsByUsernameAndPhoneNumber(String userName, String phoneNumber);
+
 }

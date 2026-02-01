@@ -15,6 +15,9 @@ public class Customers {
     @Column(name = "customer_name")
     private String customerName;
 
+    @Column(name = "contact_number")
+    private String phoneNumber;
+
     @Column(name = "address")
     private String address;
 

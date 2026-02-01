@@ -14,4 +14,5 @@ public class StockRevertDto {
     private BigDecimal invoiceRent;
     private String description;
    List<RevertDto> stock;
+   private BigDecimal gstPercentage;
 }

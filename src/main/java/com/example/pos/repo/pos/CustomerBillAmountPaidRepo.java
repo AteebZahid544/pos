@@ -1,38 +1,40 @@
 package com.example.pos.repo.pos;
 
+import com.example.pos.entity.pos.CompanyBillAmountPaid;
 import com.example.pos.entity.pos.CustomerBillAmountPaid;
-import com.example.pos.entity.pos.CustomersBill;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface CustomerBillAmountPaidRepo extends JpaRepository<CustomerBillAmountPaid,String> {
 
     CustomerBillAmountPaid findById(int id);
 
-    Optional<CustomerBillAmountPaid> findByCustomerName(String customerName);
-    CustomerBillAmountPaid findTopByCustomerNameOrderByIdDesc(String customerName);
-
-    @Query(value = "SELECT cb.* FROM customers_balance cb " +
-            "INNER JOIN (SELECT customer_name, MAX(id) AS max_id FROM customers_balance GROUP BY customer_name) t " +
-            "ON cb.customer_name = t.customer_name AND cb.id = t.max_id",
-            nativeQuery = true)
-    List<CustomerBillAmountPaid> findLatestBalanceForAllCustomers();
-
-    @Query("SELECT c FROM CustomersBill c WHERE c.customerName = :customerName ORDER BY c.payBillTime DESC")
-    List<CustomerBillAmountPaid> findLatestBalanceByCustomerName(@Param("customerName") String customerName);
 
     CustomerBillAmountPaid findByCustomerNameAndBillingMonth(String customer, YearMonth billingMonth);
 
     CustomerBillAmountPaid findTopByCustomerNameOrderByBillingMonthDesc(String customer);
 
 
+
+
+    @Query("""
+SELECT SUM(c.balance)
+FROM CustomerBillAmountPaid c
+WHERE c.billingMonth = (
+    SELECT MAX(c2.billingMonth)
+    FROM CustomerBillAmountPaid c2
+    WHERE c2.customerName = c.customerName
+      AND c2.billingMonth <= :billingMonth
+)
+""")
+    BigDecimal getCustomerBalanceSnapshot(@Param("billingMonth") YearMonth billingMonth);
 
 }
 

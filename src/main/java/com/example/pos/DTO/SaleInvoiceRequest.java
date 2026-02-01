@@ -14,6 +14,9 @@ public class SaleInvoiceRequest {
     private String description;
     private String customerName;
     private BigDecimal payBill;
+    private BigDecimal gstPercentage;
+    private BigDecimal gstAmount;
+    private BigDecimal totalBeforeGst;
 
 
 }

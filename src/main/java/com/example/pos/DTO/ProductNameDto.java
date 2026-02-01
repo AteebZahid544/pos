@@ -9,5 +9,7 @@ public class ProductNameDto {
 
     private int id;
     private String productName;
-    private BigDecimal productPrice;
+    private BigDecimal purchasePrice;
+    private BigDecimal sellPrice;
+
 }

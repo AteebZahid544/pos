@@ -12,6 +12,7 @@ public class SalesDto {
     private String category;
     private Integer quantity;
     private BigDecimal price;
+    private BigDecimal purchasePrice;
     private BigDecimal totalPrice;
     private LocalDateTime saleEntryTime;
     private LocalDateTime recordUpdatedTime;

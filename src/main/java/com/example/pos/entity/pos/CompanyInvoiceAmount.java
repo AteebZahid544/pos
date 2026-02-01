@@ -1,9 +1,12 @@
 package com.example.pos.entity.pos;
 
+import com.example.pos.config.YearMonthAttributeConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
 
 @Data
 @Entity
@@ -41,4 +44,25 @@ public class CompanyInvoiceAmount {
     @Column(name = "Status")
     private String status;
 
+    @Column(name = "invoiceImage")
+    private String invoiceImagePath;
+
+    @Column(name = "gst_percentage", precision = 5, scale = 2)
+    private BigDecimal gstPercentage; // e.g., 18.00 for 18%
+
+    @Column(name = "gst_amount", precision = 19, scale = 2)
+    private BigDecimal gstAmount; // Calculated GST amount
+
+    @Column(name = "total_before_gst", precision = 19, scale = 2)
+    private BigDecimal totalBeforeGst; // Total before applying GST
+
+    @Convert(converter = YearMonthAttributeConverter.class)
+    @Column(name = "billing_month")
+    private YearMonth billingMonth;
+
+    @Column(name = "invoice_date")
+    private LocalDateTime invoiceDate;
+
+    @Column(name = "purchase_date")
+    private LocalDateTime purchaseDate;
 }

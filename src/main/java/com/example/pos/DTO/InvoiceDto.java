@@ -1,5 +1,6 @@
 package com.example.pos.DTO;
 
+import jakarta.persistence.Column;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -20,5 +21,9 @@ public class InvoiceDto {
     private String description;
     private BigDecimal grandTotal;
 
-    // getters & setters
+    private String invoiceImagePath;
+
+    private BigDecimal gstPercentage;
+    private BigDecimal gstAmount;
+    private BigDecimal totalBeforeGst;
 }

@@ -46,4 +46,14 @@ public class BillPaymentController {
     public Status deleteCompanyPayBill(@RequestBody PayBillDto payBillDto){
         return billPaymentService.deleteInvoice(payBillDto.getInvoiceNumber(),payBillDto.getStatus(),payBillDto.getPaymentTime(),payBillDto.getVendorName());
     }
+
+    @PutMapping("/update-customerPayBill")
+    public Status updateCustomerPayBill(@RequestBody CustomerPayBillDto customerPayBillDto) {
+        return billPaymentService.updateCustomerPayBill(customerPayBillDto.getInvoiceNumber(),customerPayBillDto.getStatus(), customerPayBillDto.getNewAmountPaid(),customerPayBillDto.getCustomerName(),customerPayBillDto.getPaymentTime());
+    }
+
+    @DeleteMapping("/delete-customerPayBill")
+    public Status deleteCustomerPayBill(@RequestBody CustomerPayBillDto customerPayBillDto){
+        return billPaymentService.deleteCustomerInvoice(customerPayBillDto.getInvoiceNumber(),customerPayBillDto.getStatus(),customerPayBillDto.getPaymentTime(),customerPayBillDto.getCustomerName());
+    }
 }

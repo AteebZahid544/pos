@@ -14,6 +14,9 @@ public class ProductInvoiceRequest {
     private String description;
     private String vendorName;
     private BigDecimal amountPaid;
+    private BigDecimal gstPercentage;
+    private BigDecimal gstAmount;
+    private BigDecimal totalBeforeGst;
 
 
 }
