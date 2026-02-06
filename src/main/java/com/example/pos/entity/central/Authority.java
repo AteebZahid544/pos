@@ -14,6 +14,9 @@ public class Authority {
 
     @Column(nullable = false, unique = true)
     private String authorityName; // PURCHASE, SALE, PRODUCTION
+//
+//    @Column(name = "is_active")
+//    private boolean isActive;
 
     public Authority() {}
     public Authority(String authorityName) { this.authorityName = authorityName; }

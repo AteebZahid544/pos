@@ -14,7 +14,7 @@ public class EmployeeLogin {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long employeeId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String username;
 
     @Column(name = "phone_number",nullable = false)
@@ -25,6 +25,9 @@ public class EmployeeLogin {
 
     @Column(nullable = false)
     private String tenantSchema;
+
+    @Column(name = "is_active")
+    private boolean isActive;
 
     // Optional: Authorities
     @ManyToMany(fetch = FetchType.EAGER)

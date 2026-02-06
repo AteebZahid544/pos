@@ -10,7 +10,7 @@ public class Authentication {
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
     @Column(name = "username")
     private String username;
@@ -25,7 +25,7 @@ public class Authentication {
     private String email;
 
     @Column(name = "is_active")
-    private boolean isActive;
+    private boolean active;
 
     @Column(name = "database_name")
     private String databaseName;

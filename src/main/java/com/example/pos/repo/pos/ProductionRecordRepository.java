@@ -47,4 +47,6 @@ public interface ProductionRecordRepository extends JpaRepository<ProductionReco
             "WHERE DATE(pr.startTime) = :date OR DATE(pr.endTime) = :date " +
             "ORDER BY pr.startTime DESC")
     List<ProductionRecord> findByDateWithSteps(@Param("date") LocalDate date);
+
+    List<ProductionRecord> findByStatus(String status);
 }

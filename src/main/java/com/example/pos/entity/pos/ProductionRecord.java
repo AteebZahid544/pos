@@ -40,9 +40,6 @@ public class ProductionRecord {
 
     private LocalDateTime endTime;
 
-//    @Column(name = "machine_id")
-//    private Long machineId; // which machine is running this process
-
 
     @OneToMany(mappedBy = "productionRecord", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore

@@ -15,11 +15,11 @@ import com.example.pos.repo.central.SessionRepo;
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
 
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -69,15 +69,35 @@ public class AuthenticationService {
                     "Username, password, email and phone number cannot be null");
         }
 
-        // ✅ Use central datasource to check existing user
         try (Connection conn = centralDataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT * FROM authentication WHERE phone_number=? OR email=?")) {
+                     "SELECT * FROM authentication WHERE (phone_number=? AND email=? AND username=?) AND is_active=true")) {
             ps.setString(1, user.getPhoneNumber());
             ps.setString(2, user.getEmail());
+            ps.setString(3, user.getUsername());
+
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return new Status(StatusMessage.FAILURE, "User already registered");
+                // ADD DEBUG LOGGING HERE
+                System.out.println("DEBUG - Found existing user:");
+                System.out.println("  Username: " + rs.getString("username"));
+                System.out.println("  Email: " + rs.getString("email"));
+                System.out.println("  Phone: " + rs.getString("phone_number"));
+                System.out.println("  is_active: " + rs.getBoolean("is_active"));
+                System.out.println("  Role: " + rs.getString("role"));
+
+                String existingEmail = rs.getString("email");
+                String existingPhone = rs.getString("phone_number");
+
+                if (existingEmail != null && existingEmail.equals(user.getEmail())) {
+                    return new Status(StatusMessage.FAILURE, "Email already registered");
+                } else if (existingPhone != null && existingPhone.equals(user.getPhoneNumber())) {
+                    return new Status(StatusMessage.FAILURE, "Phone number already registered");
+                } else {
+                    return new Status(StatusMessage.FAILURE, "User already registered");
+                }
+            } else {
+                System.out.println("DEBUG - No active user found with these credentials");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -103,7 +123,10 @@ public class AuthenticationService {
              Statement stmt = conn.createStatement()) {
 
             // 1️⃣ Create schema
-            stmt.executeUpdate("CREATE SCHEMA IF NOT EXISTS " + schemaName);
+            String createSchemaSQL = "CREATE SCHEMA IF NOT EXISTS " + schemaName;
+            stmt.executeUpdate(createSchemaSQL);
+
+            System.out.println("✅ Schema created: " + schemaName);
 
             // 2️⃣ Save schema info in admin database
             AdminDatabase dbTrack = new AdminDatabase();
@@ -114,15 +137,42 @@ public class AuthenticationService {
             dbTrack.setCreatedAt(LocalDateTime.now());
             adminDatabaseRepo.save(dbTrack);
 
-            // 3️⃣ Initialize tables
+            // 3️⃣ Switch to the new schema
+            stmt.execute("USE " + schemaName + ";");
+            System.out.println("✅ Switched to schema: " + schemaName);
+
+            // 4️⃣ Initialize tables
             ClassPathResource resource = new ClassPathResource("sql/init.sql");
             String sqlScript = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
 
-            for (String sql : sqlScript.split(";")) {
-                sql = sql.trim();
-                if (!sql.isEmpty()) {
-                    sql = sql.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS " + schemaName + ".");
+            System.out.println("📄 SQL Script loaded, length: " + sqlScript.length());
+
+            // Split by semicolon but be careful with triggers/functions
+            String[] statements = sqlScript.split(";(?=(?:[^']*'[^']*')*[^']*$)");
+
+            for (int i = 0; i < statements.length; i++) {
+                String sql = statements[i].trim();
+                if (sql.isEmpty()) continue;
+
+                // Log each statement (for debugging)
+                System.out.println("Executing statement " + (i+1) + ": " +
+                        sql.substring(0, Math.min(sql.length(), 100)) + "...");
+
+                try {
+                    // Ensure CREATE TABLE statements have IF NOT EXISTS
+                    if (sql.toUpperCase().startsWith("CREATE TABLE")) {
+                        if (!sql.toUpperCase().contains("IF NOT EXISTS")) {
+                            sql = sql.replaceFirst("CREATE TABLE", "CREATE TABLE IF NOT EXISTS");
+                        }
+                    }
+
                     stmt.execute(sql);
+                    System.out.println("✅ Statement " + (i+1) + " executed successfully");
+
+                } catch (SQLException e) {
+                    System.err.println("❌ Error executing statement " + (i+1) + ": " + e.getMessage());
+                    System.err.println("Failed SQL: " + sql);
+                    // Don't throw, continue with other statements
                 }
             }
 
@@ -180,12 +230,12 @@ public class AuthenticationService {
 //        return new Status(StatusMessage.SUCCESS, response);
 //    }
 
-    @Transactional
+    @Transactional(transactionManager = "centralTransactionManager")
     public Status login(LoginDto loginDto) {
 
         // 1️⃣ Central authentication (OWNER OR EMPLOYEE)
         Authentication auth = authenticationRepo
-                .findByPhoneNumber(loginDto.getPhoneNumber())
+                .findByPhoneNumberAndActive(loginDto.getPhoneNumber(),true)
                 .orElseThrow(() ->
                         new RuntimeException("Invalid credentials"));
 
@@ -199,7 +249,7 @@ public class AuthenticationService {
 
         // 3️⃣ Check if this user is EMPLOYEE
         Optional<EmployeeLogin> empOpt =
-                employeeLoginRepo.findByUsername(auth.getUsername());
+                employeeLoginRepo.findByUsernameAndPhoneNumber(auth.getUsername(), auth.getPhoneNumber());
 
         List<String> authorities;
 
@@ -246,6 +296,7 @@ public class AuthenticationService {
         response.setEmail(auth.getEmail());
         response.setTenantId(auth.getDatabaseName());
         response.setAuthorities(authorities);
+        response.setRole(auth.getRole());
 
         //emailService.sendLoginNotification(auth.getEmail(), auth.getUsername());
 
@@ -253,6 +304,7 @@ public class AuthenticationService {
     }
 
 
+    @Transactional(transactionManager = "centralTransactionManager")
 
     public Status validateSession(String token) {
         Optional<Session> sessionOpt = sessionRepo.findByToken(token);
@@ -267,6 +319,9 @@ public class AuthenticationService {
         long remainingSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), session.getExpiresAt());
         return new Status(StatusMessage.SUCCESS, "Session active", remainingSeconds);
     }
+
+    @Transactional(transactionManager = "centralTransactionManager")
+
     public Status logout(String token) {
         Optional<Session> sessionOpt = sessionRepo.findByToken(token);
 
@@ -278,14 +333,16 @@ public class AuthenticationService {
         return new Status(StatusMessage.SUCCESS, "Logged out successfully");
     }
 
+    @Transactional(transactionManager = "centralTransactionManager")
+
     public Status getUserData(String mobileNumber){
-        Optional<Authentication> authentication= authenticationRepo.findByPhoneNumber(mobileNumber);
+        Optional<Authentication> authentication= authenticationRepo.findByPhoneNumberAndActive(mobileNumber,true);
 
         if(authentication.isPresent()){
             Authentication authentication1= authentication.get();
 
             if (authentication1.getRole().equals("EMPLOYEE")){
-                Optional<Authentication>authentication2= authenticationRepo.findByDatabaseNameAndRole(authentication1.getDatabaseName(),"OWNER");
+                Optional<Authentication>authentication2= authenticationRepo.findByDatabaseNameAndRoleAndActive(authentication1.getDatabaseName(),"OWNER",true);
                 return new Status(StatusMessage.SUCCESS, authentication2);
             }
         }

@@ -22,6 +22,9 @@ public class EmployeeAuthority {
     @Column(name = "authority_id",nullable = false)
     private Integer authorityId; // FK to Authority table
 
+    @Column(name = "is_active")
+    private boolean isActive;
+
     public EmployeeAuthority(String employeeId, Integer authorityId) {
         this.employeeId = employeeId;
         this.authorityId = authorityId;

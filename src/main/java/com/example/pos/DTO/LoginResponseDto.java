@@ -16,4 +16,5 @@ public class LoginResponseDto {
     private LocalDateTime expiresAt;
     private String tenantId;
     private List<String> authorities;
+    private String role;
 }

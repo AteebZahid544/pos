@@ -19,5 +19,4 @@ public class ProductManufacture {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductStep> steps;
 
-    // Getters and setters
 }

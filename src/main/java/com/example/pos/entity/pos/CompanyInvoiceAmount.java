@@ -44,7 +44,7 @@ public class CompanyInvoiceAmount {
     @Column(name = "Status")
     private String status;
 
-    @Column(name = "invoiceImage")
+    @Column(name = "invoice_image")
     private String invoiceImagePath;
 
     @Column(name = "gst_percentage", precision = 5, scale = 2)

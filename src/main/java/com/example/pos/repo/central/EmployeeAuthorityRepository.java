@@ -13,4 +13,6 @@ public interface EmployeeAuthorityRepository extends JpaRepository<EmployeeAutho
     List<String> findAuthoritiesByEmployeeId(@Param("employeeId") String employeeId);
 
     void deleteByEmployeeId(String employeeId);
+
+    List<EmployeeAuthority> findByEmployeeIdAndIsActive(String employeeId, boolean isActive);
 }

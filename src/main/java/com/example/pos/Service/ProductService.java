@@ -54,9 +54,6 @@ public class ProductService {
     @Autowired
     private CompanyInvoiceAmountRepo companyInvoiceAmountRepo;
 
-    @Autowired
-    private CompanyStockReturnRepo companyStockReturnRepo;
-
     @Value("${invoice.upload.path}")
     private String invoiceUploadPath;
 

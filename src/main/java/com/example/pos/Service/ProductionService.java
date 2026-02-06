@@ -4,11 +4,14 @@ package com.example.pos.Service;
 import com.example.pos.DTO.ProductionDashboardDto;
 import com.example.pos.DTO.ProductionRecordDto;
 import com.example.pos.DTO.StepTimeResponseDto;
+import com.example.pos.entity.central.Authentication;
+import com.example.pos.entity.central.Session;
 import com.example.pos.entity.pos.ProductManufacture;
 
 import com.example.pos.entity.pos.ProductStep;
 import com.example.pos.entity.pos.ProductionRecord;
 import com.example.pos.entity.pos.StepTime;
+import com.example.pos.repo.central.AuthenticationRepo;
 import com.example.pos.repo.central.SessionRepo;
 import com.example.pos.repo.pos.ProductStepRepository;
 import com.example.pos.repo.pos.ProductionRecordRepository;
@@ -35,27 +38,40 @@ public class ProductionService {
     private final StepTimeRepository stepTimeRepo;
     private final SessionRepo sessionRepo;
     private final HttpServletRequest request;
+    private final AuthenticationRepo authenticationRepo;
 
     public ProductionService(ProductionRepository productRepo, ProductStepRepository stepRepo,
                              ProductionRecordRepository recordRepo, StepTimeRepository stepTimeRepo,
-                             SessionRepo sessionRepo, HttpServletRequest request) {
+                             SessionRepo sessionRepo, HttpServletRequest request, AuthenticationRepo authenticationRepo) {
         this.productRepo = productRepo;
         this.stepRepo = stepRepo;
         this.recordRepo = recordRepo;
         this.stepTimeRepo = stepTimeRepo;
         this.sessionRepo = sessionRepo;
         this.request = request;
+        this.authenticationRepo= authenticationRepo;
     }
 
     private Long getCurrentUserId() {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            return sessionRepo.findByToken(token)
-                    .map(session -> 1L) // Placeholder
-                    .orElse(1L);
+
+            // Get phone number from session first
+            Optional<Session> sessionOpt = sessionRepo.findByToken(token);
+            if (sessionOpt.isPresent()) {
+                String phoneNumber = sessionOpt.get().getPhoneNumber();
+
+                // Find user from Authentication table by phone number
+                Optional<Authentication> authOpt = authenticationRepo.findByPhoneNumberAndActive(phoneNumber,true);
+                if (authOpt.isPresent()) {
+                    Authentication auth = authOpt.get();
+                    // Assuming Authentication entity has getId() method that returns Long
+                    return auth.getId() != null ? auth.getId() : 1L;
+                }
+            }
         }
-        return 1L;
+        return 1L; // Default
     }
 
     private String getCurrentSessionToken() {
@@ -438,37 +454,37 @@ public class ProductionService {
         );
     }
 
-    @Transactional(readOnly = true)
-    public List<ProductionRecordDto> getUserResumableProductions() {
-        Long userId = getCurrentUserId();
+//    @Transactional(readOnly = true)
+//    public List<ProductionRecordDto> getUserResumableProductions() {
+//        Long userId = getCurrentUserId();
+//
+//        // Use the repository method
+//        List<ProductionRecord> records = recordRepo.findResumableProductions(userId);
+//
+//        return records.stream()
+//                .map(this::mapToDto)
+//                .toList();
+//    }
+//
+//    @Transactional(readOnly = true)
+//    public List<ProductionRecordDto> getUserActiveProductions() {
+//        Long userId = getCurrentUserId();
+//        // Use the method that eagerly fetches steps
+//        List<ProductionRecord> records = recordRepo.findByUserIdAndStatusAndEndTimeIsNull(userId, "ACTIVE");
+//        return records.stream()
+//                .map(this::mapToDto)
+//                .toList();
+//    }
 
-        // Use the repository method
-        List<ProductionRecord> records = recordRepo.findResumableProductions(userId);
-
-        return records.stream()
-                .map(this::mapToDto)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProductionRecordDto> getUserActiveProductions() {
-        Long userId = getCurrentUserId();
-        // Use the method that eagerly fetches steps
-        List<ProductionRecord> records = recordRepo.findByUserIdAndStatusAndEndTimeIsNull(userId, "ACTIVE");
-        return records.stream()
-                .map(this::mapToDto)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ProductionRecordDto> getPausedProductions() {
-        Long userId = getCurrentUserId();
-        // Use the method that eagerly fetches steps
-        List<ProductionRecord> records = recordRepo.findByUserIdAndStatus(userId, "PAUSED");
-        return records.stream()
-                .map(this::mapToDto)
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<ProductionRecordDto> getPausedProductions() {
+//        Long userId = getCurrentUserId();
+//        // Use the method that eagerly fetches steps
+//        List<ProductionRecord> records = recordRepo.findByUserIdAndStatus(userId, "PAUSED");
+//        return records.stream()
+//                .map(this::mapToDto)
+//                .toList();
+//    }
 
     @Transactional(readOnly = true)
     public List<ProductionRecordDto> getActiveProductions() {
@@ -521,6 +537,74 @@ public class ProductionService {
                     record.getEmployeeName(),
                     record.getCompanyName());
         }).toList();
+    }
+
+    // Add these methods to ProductionService.java
+
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getAllPausedProductions() {
+        // For admin/owner - get ALL paused productions
+        List<ProductionRecord> records = recordRepo.findByStatus("PAUSED");
+        return records.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getUserPausedProductions() {
+        // For employees - get only their own paused productions
+        Long userId = getCurrentUserId();
+        List<ProductionRecord> records = recordRepo.findByUserIdAndStatus(userId, "PAUSED");
+        return records.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    // Update the existing getPausedProductions to be user-specific
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getPausedProductions() {
+        // Default to user-specific (for employee view)
+        return getUserPausedProductions();
+    }
+
+    // ProductionService.java
+
+    // SARE active productions (owner ke liye)
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getAllActiveProductions() {
+        List<ProductionRecord> records = recordRepo.findByStatusAndEndTimeIsNull("ACTIVE");
+        return records.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    // Sirf current user ki active productions
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getUserActiveProductions() {
+        Long userId = getCurrentUserId();
+        List<ProductionRecord> records = recordRepo.findByUserIdAndStatusAndEndTimeIsNull(userId, "ACTIVE");
+        return records.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    // SARE resumed productions (owner ke liye)
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getAllResumableProductions() {
+        List<ProductionRecord> records = recordRepo.findByStatus("PAUSED");
+        return records.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    // Sirf current user ki resumed productions
+    @Transactional(readOnly = true)
+    public List<ProductionRecordDto> getUserResumableProductions() {
+        Long userId = getCurrentUserId();
+        List<ProductionRecord> records = recordRepo.findByUserIdAndStatus(userId, "PAUSED");
+        return records.stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
 }

@@ -9,5 +9,4 @@ public class AuthenticationDto {
     private String phoneNumber;
     private boolean isActive;
     private String email;
-
 }

@@ -3,7 +3,7 @@ package com.example.pos.Controller;
 import com.example.pos.DTO.ProductInvoiceRequest;
 import com.example.pos.DTO.StockRevertDto;
 import com.example.pos.Service.ProductService;
-import com.example.pos.repo.pos.CompanyStockReturnRepo;
+
 import com.example.pos.repo.pos.ProductRepo;
 import com.example.pos.util.Status;
 import com.example.pos.util.StatusMessage;
@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigDecimal;
+
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -37,9 +37,6 @@ public class ProductController {
 
     @Autowired
     private ProductRepo productRepo;
-
-    @Autowired
-    private CompanyStockReturnRepo companyStockReturnRepo;
 
     @PostMapping(value = "/stockAdded", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Status productAdded(
